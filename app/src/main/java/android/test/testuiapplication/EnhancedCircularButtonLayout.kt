@@ -35,7 +35,8 @@ fun EnhancedCircularButtonLayout(
     selectedButtonColor: Color = Color(0xFFFF9800),
     centerRadiusRatio: Float = 0.5f,
     middleRadiusRatio: Float = 0.6f,   // Радіус між іконкою та текстом
-    outerRadiusRatio: Float = 1.0f     // Зовнішній радіус (ширина кнопок)
+    outerRadiusRatio: Float = 1.0f,    // Зовнішній радіус (ширина кнопок)
+    buttonsPaddingRatio: Float = 0.0f  // Padding зверху/знизу для бічних кнопок (0.0 - 0.5)
 ) {
     var selectedButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
 
@@ -46,6 +47,12 @@ fun EnhancedCircularButtonLayout(
         val centerRadius = heightPx * centerRadiusRatio
         val middleRadius = heightPx * middleRadiusRatio
         val outerRadius = heightPx * outerRadiusRatio
+
+        // Padding для бічних кнопок
+        val buttonsPadding = heightPx * buttonsPaddingRatio
+
+        // Висота області бічних кнопок = діаметр - 2*padding
+        val buttonsAreaHeight = 2 * centerRadius - 2 * buttonsPadding
 
         Canvas(
             modifier = Modifier
@@ -110,6 +117,7 @@ fun EnhancedCircularButtonLayout(
                 centerRadius = centerRadius,
                 middleRadius = middleRadius,
                 outerRadius = outerRadius,
+                buttonsPadding = buttonsPadding,
                 buttonColor = buttonColor,
                 selectedButtonColor = selectedButtonColor
             )
@@ -124,6 +132,7 @@ fun EnhancedCircularButtonLayout(
                 centerRadius = centerRadius,
                 middleRadius = middleRadius,
                 outerRadius = outerRadius,
+                buttonsPadding = buttonsPadding,
                 buttonColor = buttonColor,
                 selectedButtonColor = selectedButtonColor
             )
@@ -169,6 +178,7 @@ private fun DrawScope.drawDualSegmentButtons(
     centerRadius: Float,
     middleRadius: Float,
     outerRadius: Float,
+    buttonsPadding: Float,
     buttonColor: Color,
     selectedButtonColor: Color
 ) {
@@ -181,6 +191,7 @@ private fun DrawScope.drawDualSegmentButtons(
             centerX, centerY,
             centerRadius,  // baseRadius для обчислення висоти
             middleRadius, outerRadius,
+            buttonsPadding,
             side
         )
 
@@ -202,6 +213,7 @@ private fun DrawScope.drawDualSegmentButtons(
             centerX, centerY,
             centerRadius,  // baseRadius для обчислення висоти
             centerRadius, middleRadius,
+            buttonsPadding,
             side
         )
 
@@ -238,6 +250,7 @@ private fun DrawScope.drawDualSegmentButtons(
             centerX, centerY,
             centerRadius,  // baseRadius
             middleRadius, outerRadius,
+            buttonsPadding,
             side
         )
 
@@ -255,6 +268,7 @@ private fun DrawScope.drawDualSegmentButtons(
             centerX, centerY,
             centerRadius,
             middleRadius,
+            buttonsPadding,
             side
         )
 
@@ -279,12 +293,13 @@ private fun createButtonPath(
     baseRadius: Float,    // Базовий радіус для обчислення висоти кнопки
     innerRadius: Float,   // Внутрішній радіус сегмента
     outerRadius: Float,   // Зовнішній радіус сегмента
+    buttonsPadding: Float, // Padding зверху/знизу
     side: Side
 ): Path {
     val vIndex = visualIndex(index, total, side)
-    val buttonHeight = (2 * baseRadius) / total
+    val buttonHeight = (2 * baseRadius - 2 * buttonsPadding) / total
 
-    val yTop = centerY - baseRadius + vIndex * buttonHeight
+    val yTop = centerY - baseRadius + buttonsPadding + vIndex * buttonHeight
     val yBottom = yTop + buttonHeight
 
     val angleTopInner = asin((yTop - centerY) / innerRadius)
@@ -369,11 +384,12 @@ private fun getTextPosition(
     baseRadius: Float,    // Базовий радіус для обчислення висоти
     innerRadius: Float,   // middleRadius
     outerRadius: Float,   // outerRadius
+    buttonsPadding: Float,
     side: Side
 ): Offset {
     val vIndex = visualIndex(index, total, side)
-    val h = (2 * baseRadius) / total
-    val y = centerY - baseRadius + vIndex * h + h / 2
+    val h = (2 * baseRadius - 2 * buttonsPadding) / total
+    val y = centerY - baseRadius + buttonsPadding + vIndex * h + h / 2
     val x = if (side == Side.LEFT)
         centerX - (innerRadius + outerRadius) / 2
     else
@@ -392,13 +408,14 @@ private fun getIconPosition(
     centerY: Float,
     innerRadius: Float,   // centerRadius
     outerRadius: Float,   // middleRadius
+    buttonsPadding: Float,
     side: Side
 ): Offset {
     val vIndex = visualIndex(index, total, side)
-    val h = (2 * innerRadius) / total
+    val h = (2 * innerRadius - 2 * buttonsPadding) / total
 
     // Вертикальна позиція центру сегмента
-    val y = centerY - innerRadius + vIndex * h + h / 2
+    val y = centerY - innerRadius + buttonsPadding + vIndex * h + h / 2
 
     // Радіус для іконки - середина між centerRadius та middleRadius
     val iconRadius = (innerRadius + outerRadius) / 2

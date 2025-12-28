@@ -57,6 +57,12 @@ fun CarInterfaceExample() {
                 text = "APPS",
                 onClick = { Log.d("CarInterface", "APPS clicked") },
                 iconColor = Color(0xFFFF9800)
+            ),
+            CircularButtonData(
+                icon = "⋮⋮⋮",  // Apps grid icon
+                text = "APPS2",
+                onClick = { Log.d("CarInterface", "APPS clicked") },
+                iconColor = Color(0xFFFF9800)
             )
         )
     }
@@ -71,7 +77,8 @@ fun CarInterfaceExample() {
         selectedButtonColor = Color(0xFFFF9800),
         centerRadiusRatio = 0.5f,
         middleRadiusRatio = 0.6f,
-        outerRadiusRatio = 1.0f
+        outerRadiusRatio = 1.0f,
+        buttonsPaddingRatio = 0.15f     // 5% padding зверху/знизу
     )
 }
 
