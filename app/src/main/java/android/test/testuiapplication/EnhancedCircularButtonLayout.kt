@@ -36,7 +36,8 @@ fun EnhancedCircularButtonLayout(
     centerRadiusRatio: Float = 0.5f,
     middleRadiusRatio: Float = 0.6f,   // Радіус між іконкою та текстом
     outerRadiusRatio: Float = 1.0f,    // Зовнішній радіус (ширина кнопок)
-    buttonsPaddingRatio: Float = 0.0f  // Padding зверху/знизу для бічних кнопок (0.0 - 0.5)
+    buttonsPaddingRatio: Float = 0.0f, // Padding зверху/знизу для бічних кнопок (0.0 - 0.5)
+    textRadialLayout: Boolean = false  // true = радіальне розташування тексту, false = вертикальне
 ) {
     var selectedButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
 
@@ -119,7 +120,8 @@ fun EnhancedCircularButtonLayout(
                 outerRadius = outerRadius,
                 buttonsPadding = buttonsPadding,
                 buttonColor = buttonColor,
-                selectedButtonColor = selectedButtonColor
+                selectedButtonColor = selectedButtonColor,
+                textRadialLayout = textRadialLayout
             )
 
             // Малюємо праві кнопки
@@ -134,7 +136,8 @@ fun EnhancedCircularButtonLayout(
                 outerRadius = outerRadius,
                 buttonsPadding = buttonsPadding,
                 buttonColor = buttonColor,
-                selectedButtonColor = selectedButtonColor
+                selectedButtonColor = selectedButtonColor,
+                textRadialLayout = textRadialLayout
             )
 
             // Малюємо центральну кнопку
@@ -180,7 +183,8 @@ private fun DrawScope.drawDualSegmentButtons(
     outerRadius: Float,
     buttonsPadding: Float,
     buttonColor: Color,
-    selectedButtonColor: Color
+    selectedButtonColor: Color,
+    textRadialLayout: Boolean
 ) {
     buttons.forEachIndexed { index, button ->
         val isSelected = selectedButton == side to index
@@ -244,15 +248,38 @@ private fun DrawScope.drawDualSegmentButtons(
             style = Stroke(width = 1f)
         )
 
-        // Малюємо текст у зовнішньому сегменті (вертикальна лінія)
-        val textPos = getTextPosition(
-            index, buttons.size,
-            centerX, centerY,
-            centerRadius,  // baseRadius
-            middleRadius, outerRadius,
-            buttonsPadding,
-            side
-        )
+        // Малюємо текст у зовнішньому сегменті
+        val textPos = if (textRadialLayout) {
+            // Радіальне X, але центрований Y (по висоті кнопки)
+            val radialPos = getIconPosition(
+                index, buttons.size,
+                centerX, centerY,
+                middleRadius,      // innerRadius для тексту
+                outerRadius,       // outerRadius для тексту
+                buttonsPadding,
+                side
+            )
+            val verticalPos = getTextPosition(
+                index, buttons.size,
+                centerX, centerY,
+                centerRadius,  // baseRadius
+                middleRadius, outerRadius,
+                buttonsPadding,
+                side
+            )
+            // X з радіального, Y з вертикального центрування
+            Offset(radialPos.x, verticalPos.y)
+        } else {
+            // Вертикальне розташування
+            getTextPosition(
+                index, buttons.size,
+                centerX, centerY,
+                centerRadius,  // baseRadius
+                middleRadius, outerRadius,
+                buttonsPadding,
+                side
+            )
+        }
 
         drawContext.canvas.nativeCanvas.drawCenteredText(
             button.text,

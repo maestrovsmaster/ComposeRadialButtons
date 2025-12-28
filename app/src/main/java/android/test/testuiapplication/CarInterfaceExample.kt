@@ -78,7 +78,8 @@ fun CarInterfaceExample() {
         centerRadiusRatio = 0.5f,
         middleRadiusRatio = 0.6f,
         outerRadiusRatio = 1.0f,
-        buttonsPaddingRatio = 0.15f     // 5% padding зверху/знизу
+        buttonsPaddingRatio = 0.15f,    // 15% padding зверху/знизу
+        textRadialLayout = true         // Радіальне розташування тексту
     )
 }
 
