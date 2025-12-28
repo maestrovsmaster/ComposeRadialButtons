@@ -28,29 +28,38 @@ fun EnhancedCircularButtonLayout(
     modifier: Modifier = Modifier,
     leftButtons: List<CircularButtonData>,
     rightButtons: List<CircularButtonData>,
+    topWideButton: CircularButtonData? = null,      // Верхня широка кнопка
+    bottomWideButton: CircularButtonData? = null,   // Нижня широка кнопка
     centerLabel: String = "Menu",
     onCenterClick: () -> Unit = {},
     centerColor: Color = Color(0xFF4CAF50),
     buttonColor: Color = Color(0xFF455A64),
     selectedButtonColor: Color = Color(0xFFFF9800),
     centerRadiusRatio: Float = 0.5f,
-    middleRadiusRatio: Float = 0.6f,   // Радіус між іконкою та текстом
-    outerRadiusRatio: Float = 1.0f,    // Зовнішній радіус (ширина кнопок)
-    buttonsPaddingRatio: Float = 0.0f, // Padding зверху/знизу для бічних кнопок (0.0 - 0.5)
-    textRadialLayout: Boolean = false  // true = радіальне розташування тексту, false = вертикальне
+    iconSegmentRadiusRatio: Float = 1.2f, // Радіус секції іконок у % від радіуса центрального кола (1.0 = 100%, 1.2 = 120%)
+    outerRadiusRatio: Float = 1.0f,       // Зовнішній радіус (ширина кнопок) відносно baseDimension
+    buttonsPaddingRatio: Float = 0.0f,    // Padding зверху/знизу для бічних кнопок (0.0 - 0.5)
+    textRadialLayout: Boolean = false,    // true = радіальне розташування тексту, false = вертикальне
+    circlePaddingRatio: Float = 0.0f      // Padding для центрального кола (0.0 - 0.5)
 ) {
     var selectedButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
+        val widthPx = with(density) { maxWidth.toPx() }
         val heightPx = with(density) { maxHeight.toPx() }
 
-        val centerRadius = heightPx * centerRadiusRatio
-        val middleRadius = heightPx * middleRadiusRatio
-        val outerRadius = heightPx * outerRadiusRatio
+        // Calculate base dimension with circle padding
+        // Діаметр кола = Найменша_сторона_екрану - 2 * паддінг_для_кола
+        val circlePadding = min(widthPx, heightPx) * circlePaddingRatio
+        val baseDimension = min(widthPx, heightPx) - 2 * circlePadding
+
+        val centerRadius = baseDimension * centerRadiusRatio
+        val middleRadius = centerRadius * iconSegmentRadiusRatio  // Відносно радіуса центрального кола
+        val outerRadius = baseDimension * outerRadiusRatio
 
         // Padding для бічних кнопок
-        val buttonsPadding = heightPx * buttonsPaddingRatio
+        val buttonsPadding = baseDimension * buttonsPaddingRatio
 
         // Висота області бічних кнопок = діаметр - 2*padding
         val buttonsAreaHeight = 2 * centerRadius - 2 * buttonsPadding
@@ -139,6 +148,42 @@ fun EnhancedCircularButtonLayout(
                 selectedButtonColor = selectedButtonColor,
                 textRadialLayout = textRadialLayout
             )
+
+            // Полярні зони - тимчасово відключені (проблеми з геометрією на лівому боці)
+            // TODO: Виправити геометрію для лівого боку polar zones
+            /*
+            // Малюємо верхню полярну зону (якщо є padding)
+            if (buttonsPadding > 0) {
+                topWideButton?.let { button ->
+                    drawPolarZone(
+                        button = button,
+                        isTop = true,
+                        centerX = centerX,
+                        centerY = centerY,
+                        centerRadius = centerRadius,
+                        middleRadius = middleRadius,
+                        buttonsPadding = buttonsPadding,
+                        buttonColor = buttonColor
+                    )
+                }
+            }
+
+            // Малюємо нижню полярну зону (якщо є padding)
+            if (buttonsPadding > 0) {
+                bottomWideButton?.let { button ->
+                    drawPolarZone(
+                        button = button,
+                        isTop = false,
+                        centerX = centerX,
+                        centerY = centerY,
+                        centerRadius = centerRadius,
+                        middleRadius = middleRadius,
+                        buttonsPadding = buttonsPadding,
+                        buttonColor = buttonColor
+                    )
+                }
+            }
+            */
 
             // Малюємо центральну кнопку
             drawCircle(
@@ -307,6 +352,146 @@ private fun DrawScope.drawDualSegmentButtons(
             button.iconColor
         )
     }
+}
+
+/**
+ * Малює полярну зону (верхню або нижню) - продовження секції іконок
+ */
+private fun DrawScope.drawPolarZone(
+    button: CircularButtonData,
+    isTop: Boolean,
+    centerX: Float,
+    centerY: Float,
+    centerRadius: Float,
+    middleRadius: Float,
+    buttonsPadding: Float,
+    buttonColor: Color
+) {
+    // Y координати для полярної зони
+    val yStart = if (isTop) {
+        centerY - centerRadius
+    } else {
+        centerY + centerRadius
+    }
+    val yEnd = if (isTop) {
+        centerY - centerRadius + buttonsPadding
+    } else {
+        centerY + centerRadius - buttonsPadding
+    }
+
+    // Створюємо path для горизонтальної смуги між centerRadius та middleRadius
+    val path = Path().apply {
+        val y1 = minOf(yStart, yEnd)
+        val y2 = maxOf(yStart, yEnd)
+
+        // Обчислюємо X координати на окружностях
+        val dx1Inner = sqrt(max(0f, centerRadius * centerRadius - (y1 - centerY) * (y1 - centerY)))
+        val dx1Outer = sqrt(max(0f, middleRadius * middleRadius - (y1 - centerY) * (y1 - centerY)))
+        val dx2Inner = sqrt(max(0f, centerRadius * centerRadius - (y2 - centerY) * (y2 - centerY)))
+        val dx2Outer = sqrt(max(0f, middleRadius * middleRadius - (y2 - centerY) * (y2 - centerY)))
+
+        // Обчислюємо кути
+        val angle1Outer = Math.toDegrees(asin(((y1 - centerY) / middleRadius).toDouble())).toFloat()
+        val angle2Outer = Math.toDegrees(asin(((y2 - centerY) / middleRadius).toDouble())).toFloat()
+        val angle1Inner = Math.toDegrees(asin(((y1 - centerY) / centerRadius).toDouble())).toFloat()
+        val angle2Inner = Math.toDegrees(asin(((y2 - centerY) / centerRadius).toDouble())).toFloat()
+
+        // Зовнішній контур
+        moveTo(centerX - dx1Outer, y1)
+        lineTo(centerX + dx1Outer, y1)
+
+        // Права дуга зовнішнього радіуса
+        arcTo(
+            Rect(
+                centerX - middleRadius,
+                centerY - middleRadius,
+                centerX + middleRadius,
+                centerY + middleRadius
+            ),
+            angle1Outer,
+            angle2Outer - angle1Outer,
+            false
+        )
+
+        lineTo(centerX - dx2Outer, y2)
+
+        // Ліва дуга зовнішнього радіуса
+        arcTo(
+            Rect(
+                centerX - middleRadius,
+                centerY - middleRadius,
+                centerX + middleRadius,
+                centerY + middleRadius
+            ),
+            180f - angle2Outer,
+            -(angle2Outer - angle1Outer),
+            false
+        )
+
+        close()
+
+        // Вирізаємо внутрішню частину (центральне коло)
+        moveTo(centerX - dx1Inner, y1)
+
+        // Ліва дуга внутрішнього радіуса
+        arcTo(
+            Rect(
+                centerX - centerRadius,
+                centerY - centerRadius,
+                centerX + centerRadius,
+                centerY + centerRadius
+            ),
+            180f - angle1Inner,
+            angle2Inner - angle1Inner,
+            false
+        )
+
+        lineTo(centerX + dx2Inner, y2)
+
+        // Права дуга внутрішнього радіуса
+        arcTo(
+            Rect(
+                centerX - centerRadius,
+                centerY - centerRadius,
+                centerX + centerRadius,
+                centerY + centerRadius
+            ),
+            angle2Inner,
+            -(angle2Inner - angle1Inner),
+            false
+        )
+
+        close()
+    }
+
+    // Колір - як внутрішня секція іконок (затемнений)
+    val polarZoneColor = buttonColor.copy(
+        red = buttonColor.red * 0.6f,
+        green = buttonColor.green * 0.6f,
+        blue = buttonColor.blue * 0.6f
+    )
+
+    drawPath(
+        path = path,
+        color = polarZoneColor,
+        style = Fill
+    )
+
+    drawPath(
+        path = path,
+        color = Color.White.copy(alpha = 0.3f),
+        style = Stroke(width = 1f)
+    )
+
+    // Малюємо іконку в центрі полярної зони
+    val iconY = (yStart + yEnd) / 2
+    drawContext.canvas.nativeCanvas.drawCenteredText(
+        button.icon,
+        centerX,
+        iconY,
+        48f,
+        button.iconColor
+    )
 }
 
 /**

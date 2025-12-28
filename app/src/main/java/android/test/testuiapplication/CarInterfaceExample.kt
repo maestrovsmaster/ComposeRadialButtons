@@ -67,19 +67,36 @@ fun CarInterfaceExample() {
         )
     }
 
+    val topPolarButton = CircularButtonData(
+        icon = "⬆",
+        text = "TOP",
+        onClick = { Log.d("CarInterface", "TOP polar clicked") },
+        iconColor = Color(0xFFFF9800)
+    )
+
+    val bottomPolarButton = CircularButtonData(
+        icon = "⬇",
+        text = "BOTTOM",
+        onClick = { Log.d("CarInterface", "BOTTOM polar clicked") },
+        iconColor = Color(0xFFFF9800)
+    )
+
     EnhancedCircularButtonLayout(
         modifier = Modifier.fillMaxSize(),
         leftButtons = leftButtons,
         rightButtons = rightButtons,
+        topWideButton = topPolarButton,
+        bottomWideButton = bottomPolarButton,
         centerLabel = "TRIAL",
         centerColor = Color(0xFF2C3E50),
         buttonColor = Color(0xFF37474F),
         selectedButtonColor = Color(0xFFFF9800),
         centerRadiusRatio = 0.5f,
-        middleRadiusRatio = 0.6f,
+        iconSegmentRadiusRatio = 1.3f,  // Радіус секції іконок = 120% від радіуса центрального кола
         outerRadiusRatio = 1.0f,
-        buttonsPaddingRatio = 0.15f,    // 15% padding зверху/знизу
-        textRadialLayout = true         // Радіальне розташування тексту
+        buttonsPaddingRatio = 0.10f,    // 15% padding зверху/знизу
+        textRadialLayout = true,        // Радіальне розташування тексту
+        circlePaddingRatio = 0.08f      // 5% padding для центрального кола
     )
 }
 
