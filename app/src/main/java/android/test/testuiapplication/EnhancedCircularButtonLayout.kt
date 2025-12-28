@@ -1,16 +1,27 @@
 package android.test.testuiapplication
 
 import android.util.Log
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.*
 
 /**
- * Enhanced Horizontal Circular Button Layout з іконками та анімаціями
+ * Enhanced Horizontal Circular Button Layout з іконками
+ * Використовує один Canvas для всіх кнопок
  */
 @Composable
 fun EnhancedCircularButtonLayout(
@@ -22,10 +33,9 @@ fun EnhancedCircularButtonLayout(
     centerColor: Color = Color(0xFF4CAF50),
     buttonColor: Color = Color(0xFF455A64),
     selectedButtonColor: Color = Color(0xFFFF9800),
-    iconSegmentColor: Color = Color(0xFF2C3E50),
     centerRadiusRatio: Float = 0.5f,
-    middleRadiusRatio: Float = 0.55f,  // Радіус між іконкою та текстом
-    outerRadiusRatio: Float = 0.65f
+    middleRadiusRatio: Float = 0.6f,   // Радіус між іконкою та текстом
+    outerRadiusRatio: Float = 1.0f     // Зовнішній радіус (ширина кнопок)
 ) {
     var selectedButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
 
@@ -37,30 +47,100 @@ fun EnhancedCircularButtonLayout(
         val middleRadius = heightPx * middleRadiusRatio
         val outerRadius = heightPx * outerRadiusRatio
 
-        androidx.compose.foundation.Canvas(
-            modifier = Modifier.fillMaxSize()
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(leftButtons, rightButtons) {
+                    detectTapGestures { offset ->
+                        val centerX = size.width / 2f
+                        val centerY = size.height / 2f
+
+                        val dx = offset.x - centerX
+                        val dy = offset.y - centerY
+                        val distance = sqrt(dx * dx + dy * dy)
+
+                        if (distance <= centerRadius) {
+                            selectedButton = null
+                            onCenterClick()
+                            return@detectTapGestures
+                        }
+
+                        if (offset.x < centerX) {
+                            leftButtons.forEachIndexed { index, button ->
+                                if (isPointInButton(
+                                        offset, index, leftButtons.size,
+                                        centerX, centerY,
+                                        centerRadius, outerRadius,
+                                        Side.LEFT
+                                    )
+                                ) {
+                                    selectedButton = Side.LEFT to index
+                                    button.onClick()
+                                    return@detectTapGestures
+                                }
+                            }
+                        } else {
+                            rightButtons.forEachIndexed { index, button ->
+                                if (isPointInButton(
+                                        offset, index, rightButtons.size,
+                                        centerX, centerY,
+                                        centerRadius, outerRadius,
+                                        Side.RIGHT
+                                    )
+                                ) {
+                                    selectedButton = Side.RIGHT to index
+                                    button.onClick()
+                                    return@detectTapGestures
+                                }
+                            }
+                        }
+                    }
+                }
         ) {
             val centerX = size.width / 2f
             val centerY = size.height / 2f
 
             // Малюємо ліві кнопки
-            leftButtons.forEachIndexed { index, buttonData ->
-                // Тут можна викликати функцію малювання або використати окремі Canvas
-            }
+            drawDualSegmentButtons(
+                buttons = leftButtons,
+                side = Side.LEFT,
+                selectedButton = selectedButton,
+                centerX = centerX,
+                centerY = centerY,
+                centerRadius = centerRadius,
+                middleRadius = middleRadius,
+                outerRadius = outerRadius,
+                buttonColor = buttonColor,
+                selectedButtonColor = selectedButtonColor
+            )
+
+            // Малюємо праві кнопки
+            drawDualSegmentButtons(
+                buttons = rightButtons,
+                side = Side.RIGHT,
+                selectedButton = selectedButton,
+                centerX = centerX,
+                centerY = centerY,
+                centerRadius = centerRadius,
+                middleRadius = middleRadius,
+                outerRadius = outerRadius,
+                buttonColor = buttonColor,
+                selectedButtonColor = selectedButtonColor
+            )
 
             // Малюємо центральну кнопку
             drawCircle(
                 color = centerColor,
                 radius = centerRadius,
-                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-                style = androidx.compose.ui.graphics.drawscope.Fill
+                center = Offset(centerX, centerY),
+                style = Fill
             )
 
             drawCircle(
                 color = Color.White,
                 radius = centerRadius,
-                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+                center = Offset(centerX, centerY),
+                style = Stroke(width = 3f)
             )
 
             drawContext.canvas.nativeCanvas.apply {
@@ -69,9 +149,341 @@ fun EnhancedCircularButtonLayout(
                     this.textAlign = android.graphics.Paint.Align.CENTER
                     this.textSize = 40f
                     this.isFakeBoldText = true
+                    this.isAntiAlias = true
                 }
                 this.drawText(centerLabel, centerX, centerY + 15f, paint)
             }
         }
     }
 }
+
+/**
+ * Малює кнопки з dual-segment (іконка + текст)
+ */
+private fun DrawScope.drawDualSegmentButtons(
+    buttons: List<CircularButtonData>,
+    side: Side,
+    selectedButton: Pair<Side, Int>?,
+    centerX: Float,
+    centerY: Float,
+    centerRadius: Float,
+    middleRadius: Float,
+    outerRadius: Float,
+    buttonColor: Color,
+    selectedButtonColor: Color
+) {
+    buttons.forEachIndexed { index, button ->
+        val isSelected = selectedButton == side to index
+
+        // Малюємо зовнішній сегмент (текст) - від middleRadius до outerRadius
+        val outerPath = createButtonPath(
+            index, buttons.size,
+            centerX, centerY,
+            centerRadius,  // baseRadius для обчислення висоти
+            middleRadius, outerRadius,
+            side
+        )
+
+        drawPath(
+            path = outerPath,
+            color = if (isSelected) selectedButtonColor else buttonColor,
+            style = Fill
+        )
+
+        drawPath(
+            path = outerPath,
+            color = Color.White.copy(alpha = 0.3f),
+            style = Stroke(width = 1f)
+        )
+
+        // Малюємо внутрішній сегмент (іконка) - від centerRadius до middleRadius
+        val innerPath = createButtonPath(
+            index, buttons.size,
+            centerX, centerY,
+            centerRadius,  // baseRadius для обчислення висоти
+            centerRadius, middleRadius,
+            side
+        )
+
+        // Колір внутрішнього сегмента - затемнена версія зовнішнього
+        val innerSegmentColor = if (isSelected) {
+            selectedButtonColor.copy(
+                red = selectedButtonColor.red * 0.6f,
+                green = selectedButtonColor.green * 0.6f,
+                blue = selectedButtonColor.blue * 0.6f
+            )
+        } else {
+            buttonColor.copy(
+                red = buttonColor.red * 0.6f,
+                green = buttonColor.green * 0.6f,
+                blue = buttonColor.blue * 0.6f
+            )
+        }
+
+        drawPath(
+            path = innerPath,
+            color = innerSegmentColor,
+            style = Fill
+        )
+
+        drawPath(
+            path = innerPath,
+            color = Color.White.copy(alpha = 0.3f),
+            style = Stroke(width = 1f)
+        )
+
+        // Малюємо текст у зовнішньому сегменті (вертикальна лінія)
+        val textPos = getTextPosition(
+            index, buttons.size,
+            centerX, centerY,
+            centerRadius,  // baseRadius
+            middleRadius, outerRadius,
+            side
+        )
+
+        drawContext.canvas.nativeCanvas.drawCenteredText(
+            button.text,
+            textPos.x,
+            textPos.y,
+            32f,
+            button.textColor
+        )
+
+        // Малюємо іконку у внутрішньому сегменті (радіально по колу)
+        val iconPos = getIconPosition(
+            index, buttons.size,
+            centerX, centerY,
+            centerRadius,
+            middleRadius,
+            side
+        )
+
+        drawContext.canvas.nativeCanvas.drawCenteredText(
+            button.icon,
+            iconPos.x,
+            iconPos.y,
+            48f,
+            button.iconColor
+        )
+    }
+}
+
+/**
+ * Створює Path для радіального сегмента кнопки
+ */
+private fun createButtonPath(
+    index: Int,
+    total: Int,
+    centerX: Float,
+    centerY: Float,
+    baseRadius: Float,    // Базовий радіус для обчислення висоти кнопки
+    innerRadius: Float,   // Внутрішній радіус сегмента
+    outerRadius: Float,   // Зовнішній радіус сегмента
+    side: Side
+): Path {
+    val vIndex = visualIndex(index, total, side)
+    val buttonHeight = (2 * baseRadius) / total
+
+    val yTop = centerY - baseRadius + vIndex * buttonHeight
+    val yBottom = yTop + buttonHeight
+
+    val angleTopInner = asin((yTop - centerY) / innerRadius)
+    val angleBottomInner = asin((yBottom - centerY) / innerRadius)
+    val angleTopOuter = asin((yTop - centerY) / outerRadius)
+    val angleBottomOuter = asin((yBottom - centerY) / outerRadius)
+
+    return Path().apply {
+        val startX = getXOnCircle(centerX, centerY, innerRadius, yTop, side)
+        moveTo(startX, yTop)
+
+        arcTo(
+            Rect(
+                centerX - innerRadius,
+                centerY - innerRadius,
+                centerX + innerRadius,
+                centerY + innerRadius
+            ),
+            innerStartAngle(angleTopInner, side),
+            innerSweep(angleTopInner, angleBottomInner, side),
+            false
+        )
+
+        lineTo(getXOnCircle(centerX, centerY, outerRadius, yBottom, side), yBottom)
+
+        arcTo(
+            Rect(
+                centerX - outerRadius,
+                centerY - outerRadius,
+                centerX + outerRadius,
+                centerY + outerRadius
+            ),
+            outerStartAngle(angleBottomOuter, side),
+            outerSweep(angleTopOuter, angleBottomOuter, side),
+            false
+        )
+
+        close()
+    }
+}
+
+/**
+ * Перевіряє, чи точка знаходиться всередині кнопки
+ */
+private fun isPointInButton(
+    point: Offset,
+    index: Int,
+    total: Int,
+    centerX: Float,
+    centerY: Float,
+    centerRadius: Float,
+    outerRadius: Float,
+    side: Side
+): Boolean {
+    val vIndex = visualIndex(index, total, side)
+    val buttonHeight = (2 * centerRadius) / total
+
+    val yTop = centerY - centerRadius + vIndex * buttonHeight
+    val yBottom = yTop + buttonHeight
+    if (point.y !in yTop..yBottom) return false
+
+    val dy = point.y - centerY
+    if (abs(dy) > outerRadius) return false
+
+    val xInner = getXOnCircle(centerX, centerY, centerRadius, point.y, side)
+    val xOuter = getXOnCircle(centerX, centerY, outerRadius, point.y, side)
+
+    return when (side) {
+        Side.LEFT -> point.x in xOuter..xInner
+        Side.RIGHT -> point.x in xInner..xOuter
+    }
+}
+
+/**
+ * Обчислює позицію тексту (вертикальна лінія між middleRadius та outerRadius)
+ */
+private fun getTextPosition(
+    index: Int,
+    total: Int,
+    centerX: Float,
+    centerY: Float,
+    baseRadius: Float,    // Базовий радіус для обчислення висоти
+    innerRadius: Float,   // middleRadius
+    outerRadius: Float,   // outerRadius
+    side: Side
+): Offset {
+    val vIndex = visualIndex(index, total, side)
+    val h = (2 * baseRadius) / total
+    val y = centerY - baseRadius + vIndex * h + h / 2
+    val x = if (side == Side.LEFT)
+        centerX - (innerRadius + outerRadius) / 2
+    else
+        centerX + (innerRadius + outerRadius) / 2
+
+    return Offset(x, y + 10f)
+}
+
+/**
+ * Обчислює позицію іконки (радіально по колу між centerRadius та middleRadius)
+ */
+private fun getIconPosition(
+    index: Int,
+    total: Int,
+    centerX: Float,
+    centerY: Float,
+    innerRadius: Float,   // centerRadius
+    outerRadius: Float,   // middleRadius
+    side: Side
+): Offset {
+    val vIndex = visualIndex(index, total, side)
+    val h = (2 * innerRadius) / total
+
+    // Вертикальна позиція центру сегмента
+    val y = centerY - innerRadius + vIndex * h + h / 2
+
+    // Радіус для іконки - середина між centerRadius та middleRadius
+    val iconRadius = (innerRadius + outerRadius) / 2
+
+    // Обчислюємо кут на основі Y позиції
+    val dy = y - centerY
+
+    // Якщо точка поза межами кола, використовуємо граничне значення
+    val angle = if (abs(dy) > iconRadius) {
+        if (dy > 0) Math.PI / 2 else -Math.PI / 2
+    } else {
+        asin((dy / iconRadius).toDouble())
+    }
+
+    // Обчислюємо X на основі кута (радіальна позиція)
+    val dx = (iconRadius * cos(angle)).toFloat()
+    val x = if (side == Side.LEFT) centerX - dx else centerX + dx
+
+    return Offset(x, y)
+}
+
+/**
+ * Малює текст з обводкою
+ */
+private fun android.graphics.Canvas.drawCenteredText(
+    text: String,
+    x: Float,
+    y: Float,
+    size: Float,
+    color: Color = Color.White
+) {
+    // Обводка
+    val strokePaint = android.graphics.Paint().apply {
+        this.color = android.graphics.Color.BLACK
+        textAlign = android.graphics.Paint.Align.CENTER
+        textSize = size
+        isFakeBoldText = true
+        isAntiAlias = true
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    drawText(text, x, y, strokePaint)
+
+    // Текст
+    val fillPaint = android.graphics.Paint().apply {
+        this.color = android.graphics.Color.argb(
+            (color.alpha * 255).toInt(),
+            (color.red * 255).toInt(),
+            (color.green * 255).toInt(),
+            (color.blue * 255).toInt()
+        )
+        textAlign = android.graphics.Paint.Align.CENTER
+        textSize = size
+        isFakeBoldText = true
+        isAntiAlias = true
+        style = android.graphics.Paint.Style.FILL
+    }
+    drawText(text, x, y, fillPaint)
+}
+
+// Helper functions
+private fun visualIndex(index: Int, total: Int, side: Side): Int =
+    if (side == Side.RIGHT) total - 1 - index else index
+
+private fun getXOnCircle(
+    cx: Float,
+    cy: Float,
+    r: Float,
+    y: Float,
+    side: Side
+): Float {
+    val dx = sqrt(r * r - (y - cy).pow(2))
+    return if (side == Side.LEFT) cx - dx else cx + dx
+}
+
+private fun innerStartAngle(a: Float, side: Side) =
+    if (side == Side.LEFT) 180f - Math.toDegrees(a.toDouble()).toFloat()
+    else Math.toDegrees(a.toDouble()).toFloat()
+
+private fun innerSweep(a1: Float, a2: Float, side: Side) =
+    Math.toDegrees((a2 - a1).toDouble()).toFloat() * if (side == Side.LEFT) -1 else 1
+
+private fun outerStartAngle(a: Float, side: Side) =
+    if (side == Side.LEFT) 180f - Math.toDegrees(a.toDouble()).toFloat()
+    else Math.toDegrees(a.toDouble()).toFloat()
+
+private fun outerSweep(a1: Float, a2: Float, side: Side) =
+    Math.toDegrees((a1 - a2).toDouble()).toFloat() * if (side == Side.LEFT) -1 else 1

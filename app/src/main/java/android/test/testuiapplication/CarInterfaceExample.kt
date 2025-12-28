@@ -61,16 +61,17 @@ fun CarInterfaceExample() {
         )
     }
 
-    HorizontalCircularButtonLayout(
+    EnhancedCircularButtonLayout(
         modifier = Modifier.fillMaxSize(),
-        leftButtons = leftButtons.map { ButtonData(it.text, it.onClick) },
-        rightButtons = rightButtons.map { ButtonData(it.text, it.onClick) },
+        leftButtons = leftButtons,
+        rightButtons = rightButtons,
         centerLabel = "TRIAL",
         centerColor = Color(0xFF2C3E50),
         buttonColor = Color(0xFF37474F),
         selectedButtonColor = Color(0xFFFF9800),
         centerRadiusRatio = 0.5f,
-        outerRadiusRatio = 0.65f
+        middleRadiusRatio = 0.6f,
+        outerRadiusRatio = 1.0f
     )
 }
 
