@@ -11,6 +11,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -149,9 +150,6 @@ fun EnhancedCircularButtonLayout(
                 textRadialLayout = textRadialLayout
             )
 
-            // Полярні зони - тимчасово відключені (проблеми з геометрією на лівому боці)
-            // TODO: Виправити геометрію для лівого боку polar zones
-            /*
             // Малюємо верхню полярну зону (якщо є padding)
             if (buttonsPadding > 0) {
                 topWideButton?.let { button ->
@@ -183,7 +181,6 @@ fun EnhancedCircularButtonLayout(
                     )
                 }
             }
-            */
 
             // Малюємо центральну кнопку
             drawCircle(
@@ -355,7 +352,7 @@ private fun DrawScope.drawDualSegmentButtons(
 }
 
 /**
- * Малює полярну зону (верхню або нижню) - продовження секції іконок
+ * Малює полярну зону (верхню або нижню) - горизонтальний сегмент між centerRadius та middleRadius
  */
 private fun DrawScope.drawPolarZone(
     button: CircularButtonData,
@@ -368,100 +365,86 @@ private fun DrawScope.drawPolarZone(
     buttonColor: Color
 ) {
     // Y координати для полярної зони
-    val yStart = if (isTop) {
+    val yTop = if (isTop) {
         centerY - centerRadius
-    } else {
-        centerY + centerRadius
-    }
-    val yEnd = if (isTop) {
-        centerY - centerRadius + buttonsPadding
     } else {
         centerY + centerRadius - buttonsPadding
     }
+    val yBottom = if (isTop) {
+        centerY - centerRadius + buttonsPadding
+    } else {
+        centerY + centerRadius
+    }
 
-    // Створюємо path для горизонтальної смуги між centerRadius та middleRadius
+    // Обчислюємо кути
+    val angleTopInner = asin((yTop - centerY) / centerRadius)
+    val angleBottomInner = asin((yBottom - centerY) / centerRadius)
+    val angleTopOuter = asin((yTop - centerY) / middleRadius)
+    val angleBottomOuter = asin((yBottom - centerY) / middleRadius)
+
+    // Обчислюємо X координати на кожній висоті
+    val xLeftOuterTop = centerX - sqrt(max(0f, middleRadius * middleRadius - (yTop - centerY) * (yTop - centerY)))
+    val xRightOuterTop = centerX + sqrt(max(0f, middleRadius * middleRadius - (yTop - centerY) * (yTop - centerY)))
+    val xLeftOuterBottom = centerX - sqrt(max(0f, middleRadius * middleRadius - (yBottom - centerY) * (yBottom - centerY)))
+    val xRightOuterBottom = centerX + sqrt(max(0f, middleRadius * middleRadius - (yBottom - centerY) * (yBottom - centerY)))
+
+    val xLeftInnerTop = centerX - sqrt(max(0f, centerRadius * centerRadius - (yTop - centerY) * (yTop - centerY)))
+    val xRightInnerTop = centerX + sqrt(max(0f, centerRadius * centerRadius - (yTop - centerY) * (yTop - centerY)))
+    val xLeftInnerBottom = centerX - sqrt(max(0f, centerRadius * centerRadius - (yBottom - centerY) * (yBottom - centerY)))
+    val xRightInnerBottom = centerX + sqrt(max(0f, centerRadius * centerRadius - (yBottom - centerY) * (yBottom - centerY)))
+
+    // Створюємо path - сегмент кільця
     val path = Path().apply {
-        val y1 = minOf(yStart, yEnd)
-        val y2 = maxOf(yStart, yEnd)
-
-        // Обчислюємо X координати на окружностях
-        val dx1Inner = sqrt(max(0f, centerRadius * centerRadius - (y1 - centerY) * (y1 - centerY)))
-        val dx1Outer = sqrt(max(0f, middleRadius * middleRadius - (y1 - centerY) * (y1 - centerY)))
-        val dx2Inner = sqrt(max(0f, centerRadius * centerRadius - (y2 - centerY) * (y2 - centerY)))
-        val dx2Outer = sqrt(max(0f, middleRadius * middleRadius - (y2 - centerY) * (y2 - centerY)))
-
-        // Обчислюємо кути
-        val angle1Outer = Math.toDegrees(asin(((y1 - centerY) / middleRadius).toDouble())).toFloat()
-        val angle2Outer = Math.toDegrees(asin(((y2 - centerY) / middleRadius).toDouble())).toFloat()
-        val angle1Inner = Math.toDegrees(asin(((y1 - centerY) / centerRadius).toDouble())).toFloat()
-        val angle2Inner = Math.toDegrees(asin(((y2 - centerY) / centerRadius).toDouble())).toFloat()
-
         // Зовнішній контур
-        moveTo(centerX - dx1Outer, y1)
-        lineTo(centerX + dx1Outer, y1)
+        moveTo(xLeftOuterTop, yTop)
+        lineTo(xRightOuterTop, yTop)
 
-        // Права дуга зовнішнього радіуса
+        // Дуга зовнішнього кола від yTop до yBottom (права сторона)
         arcTo(
-            Rect(
-                centerX - middleRadius,
-                centerY - middleRadius,
-                centerX + middleRadius,
-                centerY + middleRadius
-            ),
-            angle1Outer,
-            angle2Outer - angle1Outer,
+            Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+            Math.toDegrees(angleTopOuter.toDouble()).toFloat(),
+            Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
             false
         )
 
-        lineTo(centerX - dx2Outer, y2)
+        lineTo(xLeftOuterBottom, yBottom)
 
-        // Ліва дуга зовнішнього радіуса
+        // Дуга зовнішнього кола від yBottom до yTop (ліва сторона)
         arcTo(
-            Rect(
-                centerX - middleRadius,
-                centerY - middleRadius,
-                centerX + middleRadius,
-                centerY + middleRadius
-            ),
-            180f - angle2Outer,
-            -(angle2Outer - angle1Outer),
+            Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+            180f - Math.toDegrees(angleBottomOuter.toDouble()).toFloat(),
+            Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
             false
         )
 
         close()
 
-        // Вирізаємо внутрішню частину (центральне коло)
-        moveTo(centerX - dx1Inner, y1)
+        // Вирізаємо внутрішню частину
+        moveTo(xLeftInnerTop, yTop)
+        lineTo(xRightInnerTop, yTop)
 
-        // Ліва дуга внутрішнього радіуса
+        // Дуга внутрішнього кола від yTop до yBottom (права сторона)
         arcTo(
-            Rect(
-                centerX - centerRadius,
-                centerY - centerRadius,
-                centerX + centerRadius,
-                centerY + centerRadius
-            ),
-            180f - angle1Inner,
-            angle2Inner - angle1Inner,
+            Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+            Math.toDegrees(angleTopInner.toDouble()).toFloat(),
+            Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
             false
         )
 
-        lineTo(centerX + dx2Inner, y2)
+        lineTo(xLeftInnerBottom, yBottom)
 
-        // Права дуга внутрішнього радіуса
+        // Дуга внутрішнього кола від yBottom до yTop (ліва сторона)
         arcTo(
-            Rect(
-                centerX - centerRadius,
-                centerY - centerRadius,
-                centerX + centerRadius,
-                centerY + centerRadius
-            ),
-            angle2Inner,
-            -(angle2Inner - angle1Inner),
+            Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+            180f - Math.toDegrees(angleBottomInner.toDouble()).toFloat(),
+            Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
             false
         )
 
         close()
+
+        // Встановлюємо fill type для вирізання внутрішньої частини
+        fillType = PathFillType.EvenOdd
     }
 
     // Колір - як внутрішня секція іконок (затемнений)
@@ -484,7 +467,7 @@ private fun DrawScope.drawPolarZone(
     )
 
     // Малюємо іконку в центрі полярної зони
-    val iconY = (yStart + yEnd) / 2
+    val iconY = (yTop + yBottom) / 2 + 18f
     drawContext.canvas.nativeCanvas.drawCenteredText(
         button.icon,
         centerX,
