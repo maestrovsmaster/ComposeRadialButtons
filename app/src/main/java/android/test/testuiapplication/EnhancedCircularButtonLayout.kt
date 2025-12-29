@@ -365,22 +365,23 @@ private fun DrawScope.drawPolarZone(
     buttonColor: Color
 ) {
     // Y координати для полярної зони
+    // Полярні сегменти займають зони padding і виходять до зовнішнього радіуса middleRadius
     val yTop = if (isTop) {
-        centerY - centerRadius
+        centerY - middleRadius  // Верхній край зовнішнього кола
     } else {
-        centerY + centerRadius - buttonsPadding
+        centerY + centerRadius - buttonsPadding  // Нижній край зони бічних кнопок
     }
     val yBottom = if (isTop) {
-        centerY - centerRadius + buttonsPadding
+        centerY - centerRadius + buttonsPadding  // Верхній край зони бічних кнопок
     } else {
-        centerY + centerRadius
+        centerY + middleRadius  // Нижній край зовнішнього кола
     }
 
-    // Обчислюємо кути
-    val angleTopInner = asin((yTop - centerY) / centerRadius)
-    val angleBottomInner = asin((yBottom - centerY) / centerRadius)
-    val angleTopOuter = asin((yTop - centerY) / middleRadius)
-    val angleBottomOuter = asin((yBottom - centerY) / middleRadius)
+    // Обчислюємо кути (обмежуємо значення для asin в межах [-1, 1])
+    val angleTopInner = asin(max(-1f, min(1f, (yTop - centerY) / centerRadius)))
+    val angleBottomInner = asin(max(-1f, min(1f, (yBottom - centerY) / centerRadius)))
+    val angleTopOuter = asin(max(-1f, min(1f, (yTop - centerY) / middleRadius)))
+    val angleBottomOuter = asin(max(-1f, min(1f, (yBottom - centerY) / middleRadius)))
 
     // Обчислюємо X координати на кожній висоті
     val xLeftOuterTop = centerX - sqrt(max(0f, middleRadius * middleRadius - (yTop - centerY) * (yTop - centerY)))
