@@ -143,7 +143,7 @@ fun CarInterfaceExample() {
         buttonColor = Color(0xFF37474F),
         selectedButtonColor = Color(0xFFFF9800),
         polarButtonColor = Color(0xFF37474F),  // Колір для полярних зон
-        underPolarColor = Color(0xFF4CAF50),   // Зелений колір для under-polar зон
+        underPolarColor = Color(0xFF334233),   // Зелений колір для under-polar зон
         centerRadiusRatio = 0.5f,
         iconSegmentRadiusRatio = 1.6f,  // Радіус секції іконок = 160% від радіуса центрального кола
         outerRadiusRatio = 0.96f,
