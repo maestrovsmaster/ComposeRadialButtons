@@ -67,36 +67,84 @@ fun CarInterfaceExample() {
         )
     }
 
-    val topPolarButton = CircularButtonData(
-        icon = "⬆",
-        text = "TOP",
-        onClick = { Log.d("CarInterface", "TOP polar clicked") },
-        iconColor = Color(0xFFFF9800)
+    // Верхня полярна група кнопок (ліва половина - мінус, права - плюс)
+    val topPolarButtonGroup = PolarButtonGroup(
+        leftButton = CircularButtonData(
+            icon = "-",
+            text = "",
+            onClick = { Log.d("CarInterface", "TOP LEFT (minus) clicked") },
+            iconColor = Color(0xFFFF6B6B)  // Червоний для мінуса
+        ),
+        rightButton = CircularButtonData(
+            icon = "+",
+            text = "",
+            onClick = { Log.d("CarInterface", "TOP RIGHT (plus) clicked") },
+            iconColor = Color(0xFFFF6B6B)  // Червоний для плюса
+        ),
+        title = "Title",
+        subtitle = null,
+        titleSize = 32f,
+        titleColor = Color.White,
+        iconOffsetFromEdge = 0.12f  // 12% від краю
     )
 
-    val bottomPolarButton = CircularButtonData(
+    // Нижня полярна група кнопок (ліва - стрілка вліво, права - стрілка вправо)
+    val bottomPolarButtonGroup = PolarButtonGroup(
+        leftButton = CircularButtonData(
+            icon = "◀",
+            text = "",
+            onClick = { Log.d("CarInterface", "BOTTOM LEFT (prev) clicked") },
+            iconColor = Color.White
+        ),
+        rightButton = CircularButtonData(
+            icon = "▶",
+            text = "",
+            onClick = { Log.d("CarInterface", "BOTTOM RIGHT (next) clicked") },
+            iconColor = Color.White
+        ),
+        title = "Music Player",
+        subtitle = "No name",
+        titleSize = 36f,
+        titleColor = Color.White,
+        subtitleSize = 24f,
+        subtitleColor = Color(0xFFFF9800),  // Помаранчевий для підзаголовка
+        iconOffsetFromEdge = 0.12f  // 12% від краю
+    )
+
+    val topUnderPolarButton = CircularButtonData(
+        icon = "⬆",
+        text = "UP",
+        onClick = { Log.d("CarInterface", "TOP under-polar clicked") },
+        iconColor = Color(0xFFFFFFFF)
+    )
+
+    val bottomUnderPolarButton = CircularButtonData(
         icon = "⬇",
-        text = "BOTTOM",
-        onClick = { Log.d("CarInterface", "BOTTOM polar clicked") },
-        iconColor = Color(0xFFFF9800)
+        text = "DOWN",
+        onClick = { Log.d("CarInterface", "BOTTOM under-polar clicked") },
+        iconColor = Color(0xFFFFFFFF)
     )
 
     EnhancedCircularButtonLayout(
         modifier = Modifier.fillMaxSize(),
         leftButtons = leftButtons,
         rightButtons = rightButtons,
-        topWideButton = topPolarButton,
-        bottomWideButton = bottomPolarButton,
+        topPolarButtonGroup = topPolarButtonGroup,
+        bottomPolarButtonGroup = bottomPolarButtonGroup,
+        topUnderPolarButton = topUnderPolarButton,
+        bottomUnderPolarButton = bottomUnderPolarButton,
         centerLabel = "TRIAL",
         centerColor = Color(0xFF2C3E50),
         buttonColor = Color(0xFF37474F),
         selectedButtonColor = Color(0xFFFF9800),
+        polarButtonColor = Color(0xFF37474F),  // Колір для полярних зон
+        underPolarColor = Color(0xFF4CAF50),   // Зелений колір для under-polar зон
         centerRadiusRatio = 0.5f,
-        iconSegmentRadiusRatio = 1.3f,  // Радіус секції іконок = 120% від радіуса центрального кола
-        outerRadiusRatio = 1.0f,
-        buttonsPaddingRatio = 0.10f,    // 15% padding зверху/знизу
+        iconSegmentRadiusRatio = 1.6f,  // Радіус секції іконок = 160% від радіуса центрального кола
+        outerRadiusRatio = 0.96f,
+        buttonsPaddingRatio = 0.01f,    // 1% padding зверху/знизу
         textRadialLayout = true,        // Радіальне розташування тексту
-        circlePaddingRatio = 0.05f      // 5% padding для центрального кола
+        circlePaddingRatio = 0.15f      // 15% padding для центрального кола
     )
 }
 

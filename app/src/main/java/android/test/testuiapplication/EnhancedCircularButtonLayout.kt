@@ -21,6 +21,22 @@ import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.*
 
 /**
+ * Група полярних кнопок (верхня або нижня зона)
+ * Візуально виглядає як одна область, але містить дві окремі кнопки
+ */
+data class PolarButtonGroup(
+    val leftButton: CircularButtonData,   // Ліва половина
+    val rightButton: CircularButtonData,  // Права половина
+    val title: String? = null,            // Заголовок по центру
+    val subtitle: String? = null,         // Підзаголовок по центру
+    val titleSize: Float = 32f,           // Розмір тексту заголовка
+    val titleColor: Color = Color.White,  // Колір тексту заголовка
+    val subtitleSize: Float = 24f,        // Розмір тексту підзаголовка
+    val subtitleColor: Color = Color.White.copy(alpha = 0.7f), // Колір тексту підзаголовка
+    val iconOffsetFromEdge: Float = 0.12f // Відступ іконок від краю компонента (0.0 - 0.5)
+)
+
+/**
  * Enhanced Horizontal Circular Button Layout з іконками
  * Використовує один Canvas для всіх кнопок
  */
@@ -29,13 +45,17 @@ fun EnhancedCircularButtonLayout(
     modifier: Modifier = Modifier,
     leftButtons: List<CircularButtonData>,
     rightButtons: List<CircularButtonData>,
-    topWideButton: CircularButtonData? = null,      // Верхня широка кнопка
-    bottomWideButton: CircularButtonData? = null,   // Нижня широка кнопка
+    topPolarButtonGroup: PolarButtonGroup? = null,      // Верхня полярна група кнопок
+    bottomPolarButtonGroup: PolarButtonGroup? = null,   // Нижня полярна група кнопок
+    topUnderPolarButton: CircularButtonData? = null,    // Верхня under-polar кнопка
+    bottomUnderPolarButton: CircularButtonData? = null, // Нижня under-polar кнопка
     centerLabel: String = "Menu",
     onCenterClick: () -> Unit = {},
     centerColor: Color = Color(0xFF4CAF50),
     buttonColor: Color = Color(0xFF455A64),
     selectedButtonColor: Color = Color(0xFFFF9800),
+    polarButtonColor: Color = Color(0xFF455A64),    // Колір полярних зон
+    underPolarColor: Color = Color(0xFF4CAF50),     // Колір under-polar зон
     centerRadiusRatio: Float = 0.5f,
     iconSegmentRadiusRatio: Float = 1.2f, // Радіус секції іконок у % від радіуса центрального кола (1.0 = 100%, 1.2 = 120%)
     outerRadiusRatio: Float = 1.0f,       // Зовнішній радіус (ширина кнопок) відносно baseDimension
@@ -43,7 +63,9 @@ fun EnhancedCircularButtonLayout(
     textRadialLayout: Boolean = false,    // true = радіальне розташування тексту, false = вертикальне
     circlePaddingRatio: Float = 0.0f      // Padding для центрального кола (0.0 - 0.5)
 ) {
-    var selectedButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
+    // State для вибраної кнопки: бічна кнопка або полярна кнопка
+    var selectedSideButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
+    var selectedPolarButton by remember { mutableStateOf<Triple<PolarZone, PolarSide, Boolean>?>(null) } // (зона, сторона, isTop)
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -57,7 +79,7 @@ fun EnhancedCircularButtonLayout(
 
         val centerRadius = baseDimension * centerRadiusRatio
         val middleRadius = centerRadius * iconSegmentRadiusRatio  // Відносно радіуса центрального кола
-        val outerRadius = baseDimension * outerRadiusRatio
+        val outerRadius = min(widthPx, heightPx) * outerRadiusRatio
 
         // Padding для бічних кнопок
         val buttonsPadding = baseDimension * buttonsPaddingRatio
@@ -68,7 +90,7 @@ fun EnhancedCircularButtonLayout(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(leftButtons, rightButtons) {
+                .pointerInput(leftButtons, rightButtons, topPolarButtonGroup, bottomPolarButtonGroup) {
                     detectTapGestures { offset ->
                         val centerX = size.width / 2f
                         val centerY = size.height / 2f
@@ -77,12 +99,54 @@ fun EnhancedCircularButtonLayout(
                         val dy = offset.y - centerY
                         val distance = sqrt(dx * dx + dy * dy)
 
+                        // Перевірка центральної кнопки
                         if (distance <= centerRadius) {
-                            selectedButton = null
+                            selectedSideButton = null
+                            selectedPolarButton = null
                             onCenterClick()
                             return@detectTapGestures
                         }
 
+                        // Перевірка полярних зон (якщо є padding)
+                        if (buttonsPadding > 0) {
+                            // Верхня полярна зона
+                            topPolarButtonGroup?.let { group ->
+                                val polarSide = isPointInPolarZone(
+                                    offset, true, centerX, centerY,
+                                    centerRadius, middleRadius, buttonsPadding
+                                )
+                                if (polarSide != null) {
+                                    selectedSideButton = null
+                                    selectedPolarButton = Triple(PolarZone.POLAR, polarSide, true)
+                                    if (polarSide == PolarSide.LEFT) {
+                                        group.leftButton.onClick()
+                                    } else {
+                                        group.rightButton.onClick()
+                                    }
+                                    return@detectTapGestures
+                                }
+                            }
+
+                            // Нижня полярна зона
+                            bottomPolarButtonGroup?.let { group ->
+                                val polarSide = isPointInPolarZone(
+                                    offset, false, centerX, centerY,
+                                    centerRadius, middleRadius, buttonsPadding
+                                )
+                                if (polarSide != null) {
+                                    selectedSideButton = null
+                                    selectedPolarButton = Triple(PolarZone.POLAR, polarSide, false)
+                                    if (polarSide == PolarSide.LEFT) {
+                                        group.leftButton.onClick()
+                                    } else {
+                                        group.rightButton.onClick()
+                                    }
+                                    return@detectTapGestures
+                                }
+                            }
+                        }
+
+                        // Перевірка бічних кнопок
                         if (offset.x < centerX) {
                             leftButtons.forEachIndexed { index, button ->
                                 if (isPointInButton(
@@ -92,7 +156,8 @@ fun EnhancedCircularButtonLayout(
                                         Side.LEFT
                                     )
                                 ) {
-                                    selectedButton = Side.LEFT to index
+                                    selectedSideButton = Side.LEFT to index
+                                    selectedPolarButton = null
                                     button.onClick()
                                     return@detectTapGestures
                                 }
@@ -106,7 +171,8 @@ fun EnhancedCircularButtonLayout(
                                         Side.RIGHT
                                     )
                                 ) {
-                                    selectedButton = Side.RIGHT to index
+                                    selectedSideButton = Side.RIGHT to index
+                                    selectedPolarButton = null
                                     button.onClick()
                                     return@detectTapGestures
                                 }
@@ -122,7 +188,7 @@ fun EnhancedCircularButtonLayout(
             drawDualSegmentButtons(
                 buttons = leftButtons,
                 side = Side.LEFT,
-                selectedButton = selectedButton,
+                selectedButton = selectedSideButton,
                 centerX = centerX,
                 centerY = centerY,
                 centerRadius = centerRadius,
@@ -138,7 +204,7 @@ fun EnhancedCircularButtonLayout(
             drawDualSegmentButtons(
                 buttons = rightButtons,
                 side = Side.RIGHT,
-                selectedButton = selectedButton,
+                selectedButton = selectedSideButton,
                 centerX = centerX,
                 centerY = centerY,
                 centerRadius = centerRadius,
@@ -152,32 +218,72 @@ fun EnhancedCircularButtonLayout(
 
             // Малюємо верхню полярну зону (якщо є padding)
             if (buttonsPadding > 0) {
-                topWideButton?.let { button ->
-                    drawPolarZone(
-                        button = button,
+                topPolarButtonGroup?.let { group ->
+                    drawPolarButtonGroup(
+                        buttonGroup = group,
                         isTop = true,
                         centerX = centerX,
                         centerY = centerY,
                         centerRadius = centerRadius,
                         middleRadius = middleRadius,
+                        componentWidth = size.width,
                         buttonsPadding = buttonsPadding,
-                        buttonColor = buttonColor
+                        buttonColor = polarButtonColor,
+                        selectedButtonColor = selectedButtonColor,
+                        selectedPolarButton = selectedPolarButton
                     )
                 }
             }
 
             // Малюємо нижню полярну зону (якщо є padding)
             if (buttonsPadding > 0) {
-                bottomWideButton?.let { button ->
-                    drawPolarZone(
+                bottomPolarButtonGroup?.let { group ->
+                    drawPolarButtonGroup(
+                        buttonGroup = group,
+                        isTop = false,
+                        centerX = centerX,
+                        centerY = centerY,
+                        centerRadius = centerRadius,
+                        middleRadius = middleRadius,
+                        componentWidth = size.width,
+                        buttonsPadding = buttonsPadding,
+                        buttonColor = polarButtonColor,
+                        selectedButtonColor = selectedButtonColor,
+                        selectedPolarButton = selectedPolarButton
+                    )
+                }
+            }
+
+            // Малюємо верхню under-polar зону (якщо є padding)
+            if (buttonsPadding > 0) {
+                topUnderPolarButton?.let { button ->
+                    drawUnderPolarZone(
+                        button = button,
+                        isTop = true,
+                        centerX = centerX,
+                        centerY = centerY,
+                        centerRadius = centerRadius,
+                        middleRadius = middleRadius,
+                        outerRadius = outerRadius,
+                        buttonsPadding = buttonsPadding,
+                        underPolarColor = underPolarColor
+                    )
+                }
+            }
+
+            // Малюємо нижню under-polar зону (якщо є padding)
+            if (buttonsPadding > 0) {
+                bottomUnderPolarButton?.let { button ->
+                    drawUnderPolarZone(
                         button = button,
                         isTop = false,
                         centerX = centerX,
                         centerY = centerY,
                         centerRadius = centerRadius,
                         middleRadius = middleRadius,
+                        outerRadius = outerRadius,
                         buttonsPadding = buttonsPadding,
-                        buttonColor = buttonColor
+                        underPolarColor = underPolarColor
                     )
                 }
             }
@@ -352,38 +458,170 @@ private fun DrawScope.drawDualSegmentButtons(
 }
 
 /**
- * Малює полярну зону (верхню або нижню) - горизонтальний сегмент між centerRadius та middleRadius
+ * Малює полярну групу кнопок (верхню або нижню) - дві половини з іконками по боках і текстом по центру
  */
-private fun DrawScope.drawPolarZone(
-    button: CircularButtonData,
+private fun DrawScope.drawPolarButtonGroup(
+    buttonGroup: PolarButtonGroup,
     isTop: Boolean,
     centerX: Float,
     centerY: Float,
     centerRadius: Float,
     middleRadius: Float,
+    componentWidth: Float,
     buttonsPadding: Float,
-    buttonColor: Color
+    buttonColor: Color,
+    selectedButtonColor: Color,
+    selectedPolarButton: Triple<PolarZone, PolarSide, Boolean>?
 ) {
     // Y координати для полярної зони
-    // Полярні сегменти займають зони padding і виходять до зовнішнього радіуса middleRadius
     val yTop = if (isTop) {
-        centerY - middleRadius  // Верхній край зовнішнього кола
+        centerY - middleRadius
     } else {
-        centerY + centerRadius - buttonsPadding  // Нижній край зони бічних кнопок
+        centerY + centerRadius - buttonsPadding
     }
     val yBottom = if (isTop) {
-        centerY - centerRadius + buttonsPadding  // Верхній край зони бічних кнопок
+        centerY - centerRadius + buttonsPadding
     } else {
-        centerY + middleRadius  // Нижній край зовнішнього кола
+        centerY + middleRadius
     }
 
-    // Обчислюємо кути (обмежуємо значення для asin в межах [-1, 1])
+    // Обчислюємо кути
     val angleTopInner = asin(max(-1f, min(1f, (yTop - centerY) / centerRadius)))
     val angleBottomInner = asin(max(-1f, min(1f, (yBottom - centerY) / centerRadius)))
     val angleTopOuter = asin(max(-1f, min(1f, (yTop - centerY) / middleRadius)))
     val angleBottomOuter = asin(max(-1f, min(1f, (yBottom - centerY) / middleRadius)))
 
-    // Обчислюємо X координати на кожній висоті
+    // Колір - як внутрішня секція іконок (затемнений)
+    val polarZoneColor = buttonColor.copy(
+        red = buttonColor.red * 0.6f,
+        green = buttonColor.green * 0.6f,
+        blue = buttonColor.blue * 0.6f
+    )
+
+    val polarZoneSelectedColor = selectedButtonColor.copy(
+        red = selectedButtonColor.red * 0.6f,
+        green = selectedButtonColor.green * 0.6f,
+        blue = selectedButtonColor.blue * 0.6f
+    )
+
+    // Перевірка чи вибрана ліва половина
+    val isLeftSelected = selectedPolarButton?.let { (zone, side, top) ->
+        zone == PolarZone.POLAR && side == PolarSide.LEFT && top == isTop
+    } ?: false
+
+    // Перевірка чи вибрана права половина
+    val isRightSelected = selectedPolarButton?.let { (zone, side, top) ->
+        zone == PolarZone.POLAR && side == PolarSide.RIGHT && top == isTop
+    } ?: false
+
+    // Малюємо ліву половину
+    drawPolarHalf(
+        isLeft = true,
+        isTop = isTop,
+        centerX = centerX,
+        centerY = centerY,
+        centerRadius = centerRadius,
+        middleRadius = middleRadius,
+        yTop = yTop,
+        yBottom = yBottom,
+        angleTopInner = angleTopInner,
+        angleBottomInner = angleBottomInner,
+        angleTopOuter = angleTopOuter,
+        angleBottomOuter = angleBottomOuter,
+        color = if (isLeftSelected) polarZoneSelectedColor else polarZoneColor
+    )
+
+    // Малюємо праву половину
+    drawPolarHalf(
+        isLeft = false,
+        isTop = isTop,
+        centerX = centerX,
+        centerY = centerY,
+        centerRadius = centerRadius,
+        middleRadius = middleRadius,
+        yTop = yTop,
+        yBottom = yBottom,
+        angleTopInner = angleTopInner,
+        angleBottomInner = angleBottomInner,
+        angleTopOuter = angleTopOuter,
+        angleBottomOuter = angleBottomOuter,
+        color = if (isRightSelected) polarZoneSelectedColor else polarZoneColor
+    )
+
+    // Центр зони для тексту і іконок
+    val zoneCenterY = (yTop + yBottom) / 2
+
+    // Позиції іконок - фіксовані від країв компонента (відносно ширини екрану)
+    val iconOffsetX = (componentWidth / 2) * buttonGroup.iconOffsetFromEdge
+    val leftIconX = iconOffsetX
+    val rightIconX = componentWidth - iconOffsetX
+    val iconY = zoneCenterY + 18f
+
+    // Малюємо ліву іконку (збільшений розмір для кращої видимості)
+    drawContext.canvas.nativeCanvas.drawCenteredText(
+        buttonGroup.leftButton.icon,
+        leftIconX,
+        iconY,
+        64f,
+        buttonGroup.leftButton.iconColor
+    )
+
+    // Малюємо праву іконку (збільшений розмір для кращої видимості)
+    drawContext.canvas.nativeCanvas.drawCenteredText(
+        buttonGroup.rightButton.icon,
+        rightIconX,
+        iconY,
+        64f,
+        buttonGroup.rightButton.iconColor
+    )
+
+    // Малюємо заголовок по центру (якщо є)
+    buttonGroup.title?.let { title ->
+        val titleY = if (buttonGroup.subtitle != null) {
+            zoneCenterY - 5f
+        } else {
+            zoneCenterY + 12f
+        }
+        drawContext.canvas.nativeCanvas.drawCenteredText(
+            title,
+            centerX,
+            titleY,
+            buttonGroup.titleSize,
+            buttonGroup.titleColor
+        )
+    }
+
+    // Малюємо підзаголовок по центру (якщо є)
+    buttonGroup.subtitle?.let { subtitle ->
+        drawContext.canvas.nativeCanvas.drawCenteredText(
+            subtitle,
+            centerX,
+            zoneCenterY + 22f,
+            buttonGroup.subtitleSize,
+            buttonGroup.subtitleColor
+        )
+    }
+}
+
+/**
+ * Малює половину полярної зони (ліву або праву)
+ */
+private fun DrawScope.drawPolarHalf(
+    isLeft: Boolean,
+    isTop: Boolean,
+    centerX: Float,
+    centerY: Float,
+    centerRadius: Float,
+    middleRadius: Float,
+    yTop: Float,
+    yBottom: Float,
+    angleTopInner: Float,
+    angleBottomInner: Float,
+    angleTopOuter: Float,
+    angleBottomOuter: Float,
+    color: Color
+) {
+    // Обчислюємо X координати
     val xLeftOuterTop = centerX - sqrt(max(0f, middleRadius * middleRadius - (yTop - centerY) * (yTop - centerY)))
     val xRightOuterTop = centerX + sqrt(max(0f, middleRadius * middleRadius - (yTop - centerY) * (yTop - centerY)))
     val xLeftOuterBottom = centerX - sqrt(max(0f, middleRadius * middleRadius - (yBottom - centerY) * (yBottom - centerY)))
@@ -394,15 +632,198 @@ private fun DrawScope.drawPolarZone(
     val xLeftInnerBottom = centerX - sqrt(max(0f, centerRadius * centerRadius - (yBottom - centerY) * (yBottom - centerY)))
     val xRightInnerBottom = centerX + sqrt(max(0f, centerRadius * centerRadius - (yBottom - centerY) * (yBottom - centerY)))
 
-    // Створюємо path - сегмент кільця
     val path = Path().apply {
-        // Зовнішній контур
+        if (isLeft) {
+            // Ліва половина
+            moveTo(xLeftOuterTop, yTop)
+            lineTo(centerX, yTop)
+            lineTo(centerX, yBottom)
+            lineTo(xLeftOuterBottom, yBottom)
+
+            // Дуга зовнішнього кола (ліва сторона)
+            arcTo(
+                Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+                180f - Math.toDegrees(angleBottomOuter.toDouble()).toFloat(),
+                Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
+                false
+            )
+
+            close()
+
+            // Вирізаємо внутрішню частину
+            moveTo(xLeftInnerTop, yTop)
+            lineTo(centerX, yTop)
+            lineTo(centerX, yBottom)
+            lineTo(xLeftInnerBottom, yBottom)
+
+            // Дуга внутрішнього кола (ліва сторона)
+            arcTo(
+                Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+                180f - Math.toDegrees(angleBottomInner.toDouble()).toFloat(),
+                Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
+                false
+            )
+
+            close()
+        } else {
+            // Права половина
+            moveTo(centerX, yTop)
+            lineTo(xRightOuterTop, yTop)
+
+            // Дуга зовнішнього кола (права сторона)
+            arcTo(
+                Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+                Math.toDegrees(angleTopOuter.toDouble()).toFloat(),
+                Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
+                false
+            )
+
+            lineTo(centerX, yBottom)
+            close()
+
+            // Вирізаємо внутрішню частину
+            moveTo(centerX, yTop)
+            lineTo(xRightInnerTop, yTop)
+
+            // Дуга внутрішнього кола (права сторона)
+            arcTo(
+                Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+                Math.toDegrees(angleTopInner.toDouble()).toFloat(),
+                Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
+                false
+            )
+
+            lineTo(centerX, yBottom)
+            close()
+        }
+
+        fillType = PathFillType.EvenOdd
+    }
+
+    drawPath(
+        path = path,
+        color = color,
+        style = Fill
+    )
+
+    // Малюємо тільки зовнішню обводку (тільки дуги, без вертикальних і горизонтальних ліній)
+    if (isLeft) {
+        // Зовнішня дуга
+        val outerArc = Path().apply {
+            moveTo(xLeftOuterTop, yTop)
+            arcTo(
+                Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+                180f - Math.toDegrees(angleTopOuter.toDouble()).toFloat(),
+                -Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
+                false
+            )
+        }
+        drawPath(
+            path = outerArc,
+            color = Color.White.copy(alpha = 0.3f),
+            style = Stroke(width = 1f)
+        )
+
+        // Внутрішня дуга
+        val innerArc = Path().apply {
+            moveTo(xLeftInnerTop, yTop)
+            arcTo(
+                Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+                180f - Math.toDegrees(angleTopInner.toDouble()).toFloat(),
+                -Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
+                false
+            )
+        }
+        drawPath(
+            path = innerArc,
+            color = Color.White.copy(alpha = 0.3f),
+            style = Stroke(width = 1f)
+        )
+    } else {
+        // Зовнішня дуга
+        val outerArc = Path().apply {
+            moveTo(xRightOuterTop, yTop)
+            arcTo(
+                Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+                Math.toDegrees(angleTopOuter.toDouble()).toFloat(),
+                Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
+                false
+            )
+        }
+        drawPath(
+            path = outerArc,
+            color = Color.White.copy(alpha = 0.3f),
+            style = Stroke(width = 1f)
+        )
+
+        // Внутрішня дуга
+        val innerArc = Path().apply {
+            moveTo(xRightInnerTop, yTop)
+            arcTo(
+                Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+                Math.toDegrees(angleTopInner.toDouble()).toFloat(),
+                Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
+                false
+            )
+        }
+        drawPath(
+            path = innerArc,
+            color = Color.White.copy(alpha = 0.3f),
+            style = Stroke(width = 1f)
+        )
+    }
+}
+
+/**
+ * Малює under-polar зону (верхню або нижню) - горизонтальний сегмент між middleRadius та outerRadius
+ */
+private fun DrawScope.drawUnderPolarZone(
+    button: CircularButtonData,
+    isTop: Boolean,
+    centerX: Float,
+    centerY: Float,
+    centerRadius: Float,
+    middleRadius: Float,
+    outerRadius: Float,
+    buttonsPadding: Float,
+    underPolarColor: Color
+) {
+    // Y координати для under-polar зони
+    val yTop = if (isTop) {
+        centerY - outerRadius
+    } else {
+        centerY + centerRadius - buttonsPadding
+    }
+    val yBottom = if (isTop) {
+        centerY - centerRadius + buttonsPadding
+    } else {
+        centerY + outerRadius
+    }
+
+    // Обчислюємо кути
+    val angleTopInner = asin(max(-1f, min(1f, (yTop - centerY) / middleRadius)))
+    val angleBottomInner = asin(max(-1f, min(1f, (yBottom - centerY) / middleRadius)))
+    val angleTopOuter = asin(max(-1f, min(1f, (yTop - centerY) / outerRadius)))
+    val angleBottomOuter = asin(max(-1f, min(1f, (yBottom - centerY) / outerRadius)))
+
+    // Обчислюємо X координати
+    val xLeftOuterTop = centerX - sqrt(max(0f, outerRadius * outerRadius - (yTop - centerY) * (yTop - centerY)))
+    val xRightOuterTop = centerX + sqrt(max(0f, outerRadius * outerRadius - (yTop - centerY) * (yTop - centerY)))
+    val xLeftOuterBottom = centerX - sqrt(max(0f, outerRadius * outerRadius - (yBottom - centerY) * (yBottom - centerY)))
+    val xRightOuterBottom = centerX + sqrt(max(0f, outerRadius * outerRadius - (yBottom - centerY) * (yBottom - centerY)))
+
+    val xLeftInnerTop = centerX - sqrt(max(0f, middleRadius * middleRadius - (yTop - centerY) * (yTop - centerY)))
+    val xRightInnerTop = centerX + sqrt(max(0f, middleRadius * middleRadius - (yTop - centerY) * (yTop - centerY)))
+    val xLeftInnerBottom = centerX - sqrt(max(0f, middleRadius * middleRadius - (yBottom - centerY) * (yBottom - centerY)))
+    val xRightInnerBottom = centerX + sqrt(max(0f, middleRadius * middleRadius - (yBottom - centerY) * (yBottom - centerY)))
+
+    // Створюємо path
+    val path = Path().apply {
         moveTo(xLeftOuterTop, yTop)
         lineTo(xRightOuterTop, yTop)
 
-        // Дуга зовнішнього кола від yTop до yBottom (права сторона)
         arcTo(
-            Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+            Rect(centerX - outerRadius, centerY - outerRadius, centerX + outerRadius, centerY + outerRadius),
             Math.toDegrees(angleTopOuter.toDouble()).toFloat(),
             Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
             false
@@ -410,9 +831,8 @@ private fun DrawScope.drawPolarZone(
 
         lineTo(xLeftOuterBottom, yBottom)
 
-        // Дуга зовнішнього кола від yBottom до yTop (ліва сторона)
         arcTo(
-            Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
+            Rect(centerX - outerRadius, centerY - outerRadius, centerX + outerRadius, centerY + outerRadius),
             180f - Math.toDegrees(angleBottomOuter.toDouble()).toFloat(),
             Math.toDegrees((angleBottomOuter - angleTopOuter).toDouble()).toFloat(),
             false
@@ -424,9 +844,8 @@ private fun DrawScope.drawPolarZone(
         moveTo(xLeftInnerTop, yTop)
         lineTo(xRightInnerTop, yTop)
 
-        // Дуга внутрішнього кола від yTop до yBottom (права сторона)
         arcTo(
-            Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+            Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
             Math.toDegrees(angleTopInner.toDouble()).toFloat(),
             Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
             false
@@ -434,30 +853,20 @@ private fun DrawScope.drawPolarZone(
 
         lineTo(xLeftInnerBottom, yBottom)
 
-        // Дуга внутрішнього кола від yBottom до yTop (ліва сторона)
         arcTo(
-            Rect(centerX - centerRadius, centerY - centerRadius, centerX + centerRadius, centerY + centerRadius),
+            Rect(centerX - middleRadius, centerY - middleRadius, centerX + middleRadius, centerY + middleRadius),
             180f - Math.toDegrees(angleBottomInner.toDouble()).toFloat(),
             Math.toDegrees((angleBottomInner - angleTopInner).toDouble()).toFloat(),
             false
         )
 
         close()
-
-        // Встановлюємо fill type для вирізання внутрішньої частини
         fillType = PathFillType.EvenOdd
     }
 
-    // Колір - як внутрішня секція іконок (затемнений)
-    val polarZoneColor = buttonColor.copy(
-        red = buttonColor.red * 0.6f,
-        green = buttonColor.green * 0.6f,
-        blue = buttonColor.blue * 0.6f
-    )
-
     drawPath(
         path = path,
-        color = polarZoneColor,
+        color = underPolarColor,
         style = Fill
     )
 
@@ -467,7 +876,7 @@ private fun DrawScope.drawPolarZone(
         style = Stroke(width = 1f)
     )
 
-    // Малюємо іконку в центрі полярної зони
+    // Малюємо іконку
     val iconY = (yTop + yBottom) / 2 + 18f
     drawContext.canvas.nativeCanvas.drawCenteredText(
         button.icon,
@@ -700,3 +1109,45 @@ private fun outerStartAngle(a: Float, side: Side) =
 
 private fun outerSweep(a1: Float, a2: Float, side: Side) =
     Math.toDegrees((a1 - a2).toDouble()).toFloat() * if (side == Side.LEFT) -1 else 1
+
+/**
+ * Перевіряє, чи точка знаходиться в полярній зоні, і повертає сторону (LEFT/RIGHT) або null
+ */
+private fun isPointInPolarZone(
+    point: Offset,
+    isTop: Boolean,
+    centerX: Float,
+    centerY: Float,
+    centerRadius: Float,
+    middleRadius: Float,
+    buttonsPadding: Float
+): PolarSide? {
+    // Y координати для полярної зони
+    val yTop = if (isTop) {
+        centerY - middleRadius
+    } else {
+        centerY + centerRadius - buttonsPadding
+    }
+    val yBottom = if (isTop) {
+        centerY - centerRadius + buttonsPadding
+    } else {
+        centerY + middleRadius
+    }
+
+    // Перевірка чи точка в межах Y
+    if (point.y !in yTop..yBottom) return null
+
+    // Перевірка відстані від центру (має бути між centerRadius та middleRadius)
+    val dx = point.x - centerX
+    val dy = point.y - centerY
+    val distance = sqrt(dx * dx + dy * dy)
+
+    if (distance < centerRadius || distance > middleRadius) return null
+
+    // Визначення сторони (ліва чи права)
+    return if (point.x < centerX) PolarSide.LEFT else PolarSide.RIGHT
+}
+
+// Polar zone enums
+enum class PolarZone { POLAR, UNDER_POLAR }
+enum class PolarSide { LEFT, RIGHT }
