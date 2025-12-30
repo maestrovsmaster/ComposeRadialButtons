@@ -6,6 +6,8 @@ import android.test.testuiapplication.circularbuttonlayout.data.PolarButtonGroup
 import android.test.testuiapplication.circularbuttonlayout.data.Side
 import android.test.testuiapplication.circularbuttonlayout.components.CircularButton
 import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -194,7 +196,9 @@ fun DirectCircularButtonExample() {
 fun CarInterfacePreview() {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            CarInterfaceExample()
+            Box(modifier = Modifier.fillMaxSize().background(Color.Blue)) {
+                CarInterfaceExample()
+            }
         }
     }
 }

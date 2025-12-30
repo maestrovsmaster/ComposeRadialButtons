@@ -19,12 +19,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import kotlin.Float
 import kotlin.math.*
 
 /**
@@ -52,7 +55,8 @@ fun EnhancedCircularButtonLayout(
     outerRadiusRatio: Float = 1.0f,       // Зовнішній радіус (ширина кнопок) відносно baseDimension
     buttonsPaddingRatio: Float = 0.0f,    // Padding зверху/знизу для бічних кнопок (0.0 - 0.5)
     textRadialLayout: Boolean = false,    // true = радіальне розташування тексту, false = вертикальне
-    circlePaddingRatio: Float = 0.0f      // Padding для центрального кола (0.0 - 0.5)
+    circlePaddingRatio: Float = 0.0f ,     // Padding для центрального кола (0.0 - 0.5)
+    elementsPadding: Float = 8f  // Paddings between elements (0.0 - 20.0)
 ) {
     // State для вибраної кнопки: бічна кнопка або полярна кнопка
     var selectedSideButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
@@ -190,7 +194,8 @@ fun EnhancedCircularButtonLayout(
                 buttonsPadding = buttonsPadding,
                 buttonColor = buttonColor,
                 selectedButtonColor = selectedButtonColor,
-                textRadialLayout = textRadialLayout
+                textRadialLayout = textRadialLayout,
+                padding = elementsPadding
             )
 
             // Малюємо праві кнопки
@@ -206,7 +211,8 @@ fun EnhancedCircularButtonLayout(
                 buttonsPadding = buttonsPadding,
                 buttonColor = buttonColor,
                 selectedButtonColor = selectedButtonColor,
-                textRadialLayout = textRadialLayout
+                textRadialLayout = textRadialLayout,
+                padding = elementsPadding
             )
 
             // Малюємо верхню полярну зону (якщо є padding)
@@ -224,7 +230,8 @@ fun EnhancedCircularButtonLayout(
                         buttonsPadding = buttonsPadding,
                         buttonColor = polarButtonColor,
                         selectedButtonColor = selectedButtonColor,
-                        selectedPolarButton = selectedPolarButton
+                        selectedPolarButton = selectedPolarButton,
+                        padding = elementsPadding
                     )
                 }
             }
@@ -244,7 +251,8 @@ fun EnhancedCircularButtonLayout(
                         buttonsPadding = buttonsPadding,
                         buttonColor = polarButtonColor,
                         selectedButtonColor = selectedButtonColor,
-                        selectedPolarButton = selectedPolarButton
+                        selectedPolarButton = selectedPolarButton,
+                        padding = elementsPadding
                     )
                 }
             }
@@ -261,7 +269,8 @@ fun EnhancedCircularButtonLayout(
                         middleRadius = middleRadius,
                         outerRadius = outerRadius,
                         buttonsPadding = buttonsPadding,
-                        underPolarColor = underPolarColor
+                        underPolarColor = underPolarColor,
+                        padding = elementsPadding
                     )
                 }
             }
@@ -278,12 +287,15 @@ fun EnhancedCircularButtonLayout(
                         middleRadius = middleRadius,
                         outerRadius = outerRadius,
                         buttonsPadding = buttonsPadding,
-                        underPolarColor = underPolarColor
+                        underPolarColor = underPolarColor,
+                        padding = elementsPadding
                     )
                 }
             }
 
             // Малюємо центральну кнопку
+            drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
+
             drawCircle(
                 color = centerColor,
                 radius = centerRadius,
@@ -295,8 +307,10 @@ fun EnhancedCircularButtonLayout(
                 color = Color.White,
                 radius = centerRadius,
                 center = Offset(centerX, centerY),
-                style = Stroke(width = 3f)
+                style = Stroke(width = elementsPadding),
+                blendMode = BlendMode.Clear
             )
+            drawContext.canvas.restore()
 
             drawContext.canvas.nativeCanvas.apply {
                 val paint = Paint().apply {

@@ -3,6 +3,7 @@ package android.test.testuiapplication.circularbuttonlayout.geometry
 import android.test.testuiapplication.circularbuttonlayout.data.Side
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import kotlin.math.asin
 
 /**
@@ -17,7 +18,8 @@ fun createButtonPath(
     innerRadius: Float,   // Внутрішній радіус сегмента
     outerRadius: Float,   // Зовнішній радіус сегмента
     buttonsPadding: Float, // Padding зверху/знизу
-    side: Side
+    side: Side,
+   // withNotch: Boolean = false
 ): Path {
     val vIndex = visualIndex(index, total, side)
     val buttonHeight = (2 * baseRadius - 2 * buttonsPadding) / total
@@ -30,7 +32,7 @@ fun createButtonPath(
     val angleTopOuter = asin((yTop - centerY) / outerRadius)
     val angleBottomOuter = asin((yBottom - centerY) / outerRadius)
 
-    return Path().apply {
+    val mainPath = Path().apply {
         val startX = getXOnCircle(centerX, centerY, innerRadius, yTop, side)
         moveTo(startX, yTop)
 
@@ -62,4 +64,24 @@ fun createButtonPath(
 
         close()
     }
+
+    /*if (withNotch) {
+
+        val notchPath = createNotchPath(
+            index,
+            total,
+            centerX,
+            centerY,
+            baseRadius,
+            innerRadius,
+            outerRadius,
+            buttonsPadding,
+            side
+        )
+        val resultPath = Path()
+        resultPath.op(mainPath, notchPath, PathOperation.Difference)
+        return resultPath
+    }*/
+
+    return mainPath
 }

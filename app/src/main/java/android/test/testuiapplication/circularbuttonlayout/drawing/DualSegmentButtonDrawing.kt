@@ -3,11 +3,17 @@ package android.test.testuiapplication.circularbuttonlayout.drawing
 import android.test.testuiapplication.circularbuttonlayout.data.CircularButtonData
 import android.test.testuiapplication.circularbuttonlayout.data.Side
 import android.test.testuiapplication.circularbuttonlayout.geometry.createButtonPath
+import android.test.testuiapplication.circularbuttonlayout.geometry.createNotchPath
 import android.test.testuiapplication.circularbuttonlayout.utils.drawCenteredText
 import android.test.testuiapplication.circularbuttonlayout.utils.getIconPosition
 import android.test.testuiapplication.circularbuttonlayout.utils.getTextPosition
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -28,7 +34,8 @@ fun DrawScope.drawDualSegmentButtons(
     buttonsPadding: Float,
     buttonColor: Color,
     selectedButtonColor: Color,
-    textRadialLayout: Boolean
+    textRadialLayout: Boolean,
+    padding: Float = 0f
 ) {
     buttons.forEachIndexed { index, button ->
         val isSelected = selectedButton == side to index
@@ -40,20 +47,65 @@ fun DrawScope.drawDualSegmentButtons(
             centerRadius,  // baseRadius для обчислення висоти
             middleRadius, outerRadius,
             buttonsPadding,
-            side
+            side,
         )
 
+        val notchPathCut = createNotchPath(
+            index,
+            buttons.size,
+            centerX,
+            centerY,
+            centerRadius,
+            middleRadius,
+            outerRadius,
+            buttonsPadding,
+            side,
+            notchHeight = 20f,
+            cornerSize = 20f,
+            koefWidth = 0.8f,
+            cutBottomSize = 10f
+        )
+        val resultPath = Path()
+        resultPath.op(outerPath, notchPathCut, PathOperation.Difference)
+        //return resultPath
+
+        val notchIndicator = createNotchPath(
+            index,
+            buttons.size,
+            centerX,
+            centerY,
+            centerRadius,
+            middleRadius,
+            outerRadius,
+            buttonsPadding,
+            side,
+            notchHeight = 16f,
+            cornerSize = 80f,
+            koefWidth = 0.78f,
+            cutBottomSize = 0f
+        )
+
+
         drawPath(
-            path = outerPath,
+            path = notchIndicator,
+            color = selectedButtonColor,
+            style = Fill
+        )
+
+        drawContext.canvas.saveLayer(size.toRect(), Paint())
+        drawPath(
+            path = resultPath,
             color = if (isSelected) selectedButtonColor else buttonColor,
             style = Fill
         )
 
         drawPath(
-            path = outerPath,
-            color = Color.White.copy(alpha = 0.3f),
-            style = Stroke(width = 1f)
+            path = resultPath,
+            color = Color.Black,//White.copy(alpha = 0.3f),
+            style = Stroke(width = padding),
+            blendMode = BlendMode.Clear
         )
+        drawContext.canvas.restore()
 
         // Малюємо внутрішній сегмент (іконка) - від centerRadius до middleRadius
         val innerPath = createButtonPath(
@@ -80,6 +132,7 @@ fun DrawScope.drawDualSegmentButtons(
             )
         }
 
+        drawContext.canvas.saveLayer(size.toRect(), Paint())
         drawPath(
             path = innerPath,
             color = innerSegmentColor,
@@ -88,9 +141,12 @@ fun DrawScope.drawDualSegmentButtons(
 
         drawPath(
             path = innerPath,
-            color = Color.White.copy(alpha = 0.3f),
-            style = Stroke(width = 1f)
+            color = Color.Black,//White.copy(alpha = 0.8f),
+            style = Stroke(width = padding),
+            blendMode = BlendMode.Clear
         )
+
+        drawContext.canvas.restore()
 
         // Малюємо текст у зовнішньому сегменті
         val textPos = if (textRadialLayout) {

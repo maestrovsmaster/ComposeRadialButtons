@@ -3,6 +3,8 @@ package android.test.testuiapplication.circularbuttonlayout.drawing
 import android.test.testuiapplication.circularbuttonlayout.data.CircularButtonData
 import android.test.testuiapplication.circularbuttonlayout.utils.drawCenteredText
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
@@ -24,7 +26,8 @@ fun DrawScope.drawUnderPolarZone(
     middleRadius: Float,
     outerRadius: Float,
     buttonsPadding: Float,
-    underPolarColor: Color
+    underPolarColor: Color,
+    padding: Float = 0f
 ) {
     // Y координати для under-polar зони
     val yTop = if (isTop) {
@@ -102,6 +105,8 @@ fun DrawScope.drawUnderPolarZone(
         fillType = PathFillType.EvenOdd
     }
 
+    drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
+
     drawPath(
         path = path,
         color = underPolarColor,
@@ -111,8 +116,11 @@ fun DrawScope.drawUnderPolarZone(
     drawPath(
         path = path,
         color = Color.White.copy(alpha = 0.3f),
-        style = Stroke(width = 1f)
+        style = Stroke(width = padding),
+        blendMode = BlendMode.Clear
     )
+
+    drawContext.canvas.restore()
 
     // Малюємо іконку
     val iconY = (yTop + yBottom) / 2 + 18f
