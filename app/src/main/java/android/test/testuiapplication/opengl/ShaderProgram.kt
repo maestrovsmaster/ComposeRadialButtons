@@ -52,6 +52,7 @@ const val FRAGMENT_SHADER_CODE = """
         vec3 viewDir = normalize(uCameraPos - vPosition);
         vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(viewDir, reflectDir), 0.76), 0.8);
+        // Віддітни кльорів сфери.
         vec3 specular = specularStrength * spec * vec3(1.0, 1.2, 1.3);
 
         vec3 result = ambient + diffuse + specular;
