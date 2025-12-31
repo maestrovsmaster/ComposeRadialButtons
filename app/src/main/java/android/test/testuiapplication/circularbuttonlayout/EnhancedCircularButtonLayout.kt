@@ -6,6 +6,7 @@ import android.test.testuiapplication.circularbuttonlayout.data.Side
 import android.test.testuiapplication.circularbuttonlayout.data.PolarButtonGroup
 import android.test.testuiapplication.circularbuttonlayout.data.PolarSide
 import android.test.testuiapplication.circularbuttonlayout.data.PolarZone
+import android.test.testuiapplication.circularbuttonlayout.data.CircularLayoutTheme
 import android.test.testuiapplication.circularbuttonlayout.drawing.drawDualSegmentButtons
 import android.test.testuiapplication.circularbuttonlayout.drawing.drawPolarButtonGroup
 import android.test.testuiapplication.circularbuttonlayout.drawing.drawUnderPolarZone
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.Float
@@ -45,11 +47,7 @@ fun EnhancedCircularButtonLayout(
     bottomUnderPolarButton: CircularButtonData? = null, // Нижня under-polar кнопка
     centerLabel: String = "Menu",
     onCenterClick: () -> Unit = {},
-    centerColor: Color = Color(0xFF4CAF50),
-    buttonColor: Color = Color(0xFF455A64),
-    selectedButtonColor: Color = Color(0xFFFF9800),
-    polarButtonColor: Color = Color(0xFF455A64),    // Колір полярних зон
-    underPolarColor: Color = Color(0xFF4CAF50),     // Колір under-polar зон
+    theme: CircularLayoutTheme = CircularLayoutTheme.default(),  // Тема для всього layout
     centerRadiusRatio: Float = 0.5f,
     iconSegmentRadiusRatio: Float = 1.2f, // Радіус секції іконок у % від радіуса центрального кола (1.0 = 100%, 1.2 = 120%)
     outerRadiusRatio: Float = 1.0f,       // Зовнішній радіус (ширина кнопок) відносно baseDimension
@@ -58,9 +56,12 @@ fun EnhancedCircularButtonLayout(
     circlePaddingRatio: Float = 0.0f ,     // Padding для центрального кола (0.0 - 0.5)
     elementsPadding: Float = 8f  // Paddings between elements (0.0 - 20.0)
 ) {
-    // State для вибраної кнопки: бічна кнопка або полярна кнопка
-    var selectedSideButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
-    var selectedPolarButton by remember { mutableStateOf<Triple<PolarZone, PolarSide, Boolean>?>(null) } // (зона, сторона, isTop)
+    // State для натиснутої кнопки (тільки під час натискання)
+    var pressedSideButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
+    var pressedPolarButton by remember { mutableStateOf<Triple<PolarZone, PolarSide, Boolean>?>(null) } // (зона, сторона, isTop)
+
+    // State для радіогруп: Map<radioGroupId, Pair<Side, buttonIndex>>
+    var selectedRadioButtons by remember { mutableStateOf<Map<String, Pair<Side, Int>>>(emptyMap()) }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -88,94 +89,111 @@ fun EnhancedCircularButtonLayout(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(leftButtons, rightButtons, topPolarButtonGroup, bottomPolarButtonGroup) {
-                    detectTapGestures { offset ->
-                        val centerX = size.width / 2f
-                        val centerY = size.height / 2f
+                    detectTapGestures(
+                        onPress = { offset ->
+                            val centerX = size.width / 2f
+                            val centerY = size.height / 2f
 
-                        val dx = offset.x - centerX
-                        val dy = offset.y - centerY
-                        val distance = sqrt(dx * dx + dy * dy)
+                            val dx = offset.x - centerX
+                            val dy = offset.y - centerY
+                            val distance = sqrt(dx * dx + dy * dy)
 
-                        // Перевірка центральної кнопки
-                        if (distance <= centerRadius) {
-                            selectedSideButton = null
-                            selectedPolarButton = null
-                            onCenterClick()
-                            return@detectTapGestures
-                        }
-
-                        // Перевірка полярних зон (якщо є padding)
-                        if (buttonsPadding > 0) {
-                            // Верхня полярна зона
-                            topPolarButtonGroup?.let { group ->
-                                val polarSide = isPointInPolarZone(
-                                    offset, true, centerX, centerY,
-                                    centerRadius, middleRadius, buttonsPadding
-                                )
-                                if (polarSide != null) {
-                                    selectedSideButton = null
-                                    selectedPolarButton = Triple(PolarZone.POLAR, polarSide, true)
-                                    if (polarSide == PolarSide.LEFT) {
-                                        group.leftButton.onClick()
-                                    } else {
-                                        group.rightButton.onClick()
-                                    }
-                                    return@detectTapGestures
-                                }
+                            // Перевірка центральної кнопки
+                            if (distance <= centerRadius) {
+                                tryAwaitRelease()
+                                onCenterClick()
+                                return@detectTapGestures
                             }
 
-                            // Нижня полярна зона
-                            bottomPolarButtonGroup?.let { group ->
-                                val polarSide = isPointInPolarZone(
-                                    offset, false, centerX, centerY,
-                                    centerRadius, middleRadius, buttonsPadding
-                                )
-                                if (polarSide != null) {
-                                    selectedSideButton = null
-                                    selectedPolarButton = Triple(PolarZone.POLAR, polarSide, false)
-                                    if (polarSide == PolarSide.LEFT) {
-                                        group.leftButton.onClick()
-                                    } else {
-                                        group.rightButton.onClick()
-                                    }
-                                    return@detectTapGestures
-                                }
-                            }
-                        }
-
-                        // Перевірка бічних кнопок
-                        if (offset.x < centerX) {
-                            leftButtons.forEachIndexed { index, button ->
-                                if (isPointInButton(
-                                        offset, index, leftButtons.size,
-                                        centerX, centerY,
-                                        centerRadius, outerRadius,
-                                        Side.LEFT
+                            // Перевірка полярних зон (якщо є padding)
+                            if (buttonsPadding > 0) {
+                                // Верхня полярна зона
+                                topPolarButtonGroup?.let { group ->
+                                    val polarSide = isPointInPolarZone(
+                                        offset, true, centerX, centerY,
+                                        centerRadius, middleRadius, buttonsPadding
                                     )
-                                ) {
-                                    selectedSideButton = Side.LEFT to index
-                                    selectedPolarButton = null
-                                    button.onClick()
-                                    return@detectTapGestures
+                                    if (polarSide != null) {
+                                        pressedPolarButton = Triple(PolarZone.POLAR, polarSide, true)
+                                        tryAwaitRelease()
+                                        pressedPolarButton = null
+                                        if (polarSide == PolarSide.LEFT) {
+                                            group.leftButton.onClick()
+                                        } else {
+                                            group.rightButton.onClick()
+                                        }
+                                        return@detectTapGestures
+                                    }
+                                }
+
+                                // Нижня полярна зона
+                                bottomPolarButtonGroup?.let { group ->
+                                    val polarSide = isPointInPolarZone(
+                                        offset, false, centerX, centerY,
+                                        centerRadius, middleRadius, buttonsPadding
+                                    )
+                                    if (polarSide != null) {
+                                        pressedPolarButton = Triple(PolarZone.POLAR, polarSide, false)
+                                        tryAwaitRelease()
+                                        pressedPolarButton = null
+                                        if (polarSide == PolarSide.LEFT) {
+                                            group.leftButton.onClick()
+                                        } else {
+                                            group.rightButton.onClick()
+                                        }
+                                        return@detectTapGestures
+                                    }
                                 }
                             }
-                        } else {
-                            rightButtons.forEachIndexed { index, button ->
-                                if (isPointInButton(
-                                        offset, index, rightButtons.size,
-                                        centerX, centerY,
-                                        centerRadius, outerRadius,
-                                        Side.RIGHT
-                                    )
-                                ) {
-                                    selectedSideButton = Side.RIGHT to index
-                                    selectedPolarButton = null
-                                    button.onClick()
-                                    return@detectTapGestures
+
+                            // Перевірка бічних кнопок
+                            if (offset.x < centerX) {
+                                leftButtons.forEachIndexed { index, button ->
+                                    if (isPointInButton(
+                                            offset, index, leftButtons.size,
+                                            centerX, centerY,
+                                            centerRadius, outerRadius,
+                                            Side.LEFT
+                                        )
+                                    ) {
+                                        pressedSideButton = Side.LEFT to index
+                                        tryAwaitRelease()
+                                        pressedSideButton = null
+
+                                        // Якщо кнопка в радіогрупі - зберігаємо її як вибрану
+                                        button.radioGroupId?.let { groupId ->
+                                            selectedRadioButtons = selectedRadioButtons + (groupId to (Side.LEFT to index))
+                                        }
+
+                                        button.onClick()
+                                        return@detectTapGestures
+                                    }
+                                }
+                            } else {
+                                rightButtons.forEachIndexed { index, button ->
+                                    if (isPointInButton(
+                                            offset, index, rightButtons.size,
+                                            centerX, centerY,
+                                            centerRadius, outerRadius,
+                                            Side.RIGHT
+                                        )
+                                    ) {
+                                        pressedSideButton = Side.RIGHT to index
+                                        tryAwaitRelease()
+                                        pressedSideButton = null
+
+                                        // Якщо кнопка в радіогрупі - зберігаємо її як вибрану
+                                        button.radioGroupId?.let { groupId ->
+                                            selectedRadioButtons = selectedRadioButtons + (groupId to (Side.RIGHT to index))
+                                        }
+
+                                        button.onClick()
+                                        return@detectTapGestures
+                                    }
                                 }
                             }
                         }
-                    }
+                    )
                 }
         ) {
             val centerX = size.width / 2f
@@ -185,15 +203,18 @@ fun EnhancedCircularButtonLayout(
             drawDualSegmentButtons(
                 buttons = leftButtons,
                 side = Side.LEFT,
-                selectedButton = selectedSideButton,
+                selectedButton = pressedSideButton,
+                selectedRadioButtons = selectedRadioButtons,
                 centerX = centerX,
                 centerY = centerY,
                 centerRadius = centerRadius,
                 middleRadius = middleRadius,
                 outerRadius = outerRadius,
                 buttonsPadding = buttonsPadding,
-                buttonColor = buttonColor,
-                selectedButtonColor = selectedButtonColor,
+                buttonColor = theme.mainButtons.backgroundColor,
+                selectedButtonColor = theme.mainButtons.activeBackgroundColor,
+                notchColor = theme.mainButtons.notchColor,
+                activeNotchColor = theme.mainButtons.activeNotchColor,
                 textRadialLayout = textRadialLayout,
                 padding = elementsPadding
             )
@@ -202,15 +223,18 @@ fun EnhancedCircularButtonLayout(
             drawDualSegmentButtons(
                 buttons = rightButtons,
                 side = Side.RIGHT,
-                selectedButton = selectedSideButton,
+                selectedButton = pressedSideButton,
+                selectedRadioButtons = selectedRadioButtons,
                 centerX = centerX,
                 centerY = centerY,
                 centerRadius = centerRadius,
                 middleRadius = middleRadius,
                 outerRadius = outerRadius,
                 buttonsPadding = buttonsPadding,
-                buttonColor = buttonColor,
-                selectedButtonColor = selectedButtonColor,
+                buttonColor = theme.mainButtons.backgroundColor,
+                selectedButtonColor = theme.mainButtons.activeBackgroundColor,
+                notchColor = theme.mainButtons.notchColor,
+                activeNotchColor = theme.mainButtons.activeNotchColor,
                 textRadialLayout = textRadialLayout,
                 padding = elementsPadding
             )
@@ -228,9 +252,9 @@ fun EnhancedCircularButtonLayout(
                         componentWidth = size.width,
                         heightPx = heightPx,
                         buttonsPadding = buttonsPadding,
-                        buttonColor = polarButtonColor,
-                        selectedButtonColor = selectedButtonColor,
-                        selectedPolarButton = selectedPolarButton,
+                        buttonColor = theme.iconButtons.backgroundColor,
+                        selectedButtonColor = theme.iconButtons.activeBackgroundColor,
+                        selectedPolarButton = pressedPolarButton,
                         padding = elementsPadding
                     )
                 }
@@ -249,9 +273,9 @@ fun EnhancedCircularButtonLayout(
                         componentWidth = size.width,
                         heightPx = heightPx,
                         buttonsPadding = buttonsPadding,
-                        buttonColor = polarButtonColor,
-                        selectedButtonColor = selectedButtonColor,
-                        selectedPolarButton = selectedPolarButton,
+                        buttonColor = theme.iconButtons.backgroundColor,
+                        selectedButtonColor = theme.iconButtons.activeBackgroundColor,
+                        selectedPolarButton = pressedPolarButton,
                         padding = elementsPadding
                     )
                 }
@@ -269,7 +293,7 @@ fun EnhancedCircularButtonLayout(
                         middleRadius = middleRadius,
                         outerRadius = outerRadius,
                         buttonsPadding = buttonsPadding,
-                        underPolarColor = underPolarColor,
+                        underPolarColor = theme.underPolar.backgroundColor,
                         padding = elementsPadding
                     )
                 }
@@ -287,7 +311,7 @@ fun EnhancedCircularButtonLayout(
                         middleRadius = middleRadius,
                         outerRadius = outerRadius,
                         buttonsPadding = buttonsPadding,
-                        underPolarColor = underPolarColor,
+                        underPolarColor = theme.underPolar.backgroundColor,
                         padding = elementsPadding
                     )
                 }
@@ -297,7 +321,7 @@ fun EnhancedCircularButtonLayout(
             drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
 
             drawCircle(
-                color = centerColor,
+                color = theme.centerButton.backgroundColor,
                 radius = centerRadius,
                 center = Offset(centerX, centerY),
                 style = Fill
@@ -314,9 +338,9 @@ fun EnhancedCircularButtonLayout(
 
             drawContext.canvas.nativeCanvas.apply {
                 val paint = Paint().apply {
-                    this.color = android.graphics.Color.WHITE
+                    this.color = theme.centerButton.textColor.toArgb()
                     this.textAlign = Paint.Align.CENTER
-                    this.textSize = 40f
+                    this.textSize = theme.centerButton.textSize
                     this.isFakeBoldText = true
                     this.isAntiAlias = true
                 }

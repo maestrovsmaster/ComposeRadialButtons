@@ -10,5 +10,6 @@ data class CircularButtonData(
     val text: String,           // Текст
     val onClick: () -> Unit,
     val iconColor: Color = Color(0xFFFF9800),  // Помаранчевий за замовчуванням
-    val textColor: Color = Color.White
+    val textColor: Color = Color.White,
+    val radioGroupId: String? = null  // ID радіогрупи для взаємовиключних кнопок (як RADIO/MUSIC)
 )

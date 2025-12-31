@@ -6,6 +6,7 @@ import android.test.testuiapplication.circularbuttonlayout.data.PolarZone
 import android.test.testuiapplication.circularbuttonlayout.utils.drawCenteredText
 import android.util.Log
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -117,6 +118,8 @@ fun DrawScope.drawPolarButtonGroup(
     }
 
     // 4. Малюємо основну фігуру
+    drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
+
     drawPath(path = fullPath, color = polarZoneColor, style = Fill)
 
     // 5. Малюємо виділення (якщо вибрано сторону)
@@ -135,9 +138,30 @@ fun DrawScope.drawPolarButtonGroup(
         }
     }
 
-    // 6. Малюємо загальний контур (без лінії посередині)
-    drawPath(path = fullPath, color = Color.White.copy(alpha = 0.3f), style = Stroke(width = 1f))
+    // Додаємо 3D градієнт для об'ємності (як на основних кнопках)
+    val gradientBrush = Brush.verticalGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.3f),
+            Color.Transparent,
+            Color.Black.copy(alpha = 0.2f)
+        ),
+        startY = centerY - centerRadius,
+        endY = centerY + centerRadius
+    )
+    drawPath(
+        path = fullPath,
+        brush = gradientBrush,
+        style = Fill
+    )
 
+    // 6. Малюємо загальний контур (без лінії посередині)
+    drawPath(
+        path = fullPath,
+        color = Color.White.copy(alpha = 0.3f),
+        style = Stroke(width = padding),
+        blendMode = BlendMode.Clear
+    )
+    drawContext.canvas.restore()
     // 7. Відмальовка тексту та іконок (ваша оригінальна логіка)
     val zoneCenterY = if (isTop) (yBottom / 2) else yTop + abs(heightPx - yTop) / 2
     val iconRadius = (centerRadius + middleRadius) / 2

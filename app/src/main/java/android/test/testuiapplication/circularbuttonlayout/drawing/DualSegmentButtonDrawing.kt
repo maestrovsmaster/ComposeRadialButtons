@@ -10,10 +10,12 @@ import android.test.testuiapplication.circularbuttonlayout.utils.getTextPosition
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -26,6 +28,7 @@ fun DrawScope.drawDualSegmentButtons(
     buttons: List<CircularButtonData>,
     side: Side,
     selectedButton: Pair<Side, Int>?,
+    selectedRadioButtons: Map<String, Pair<Side, Int>>,
     centerX: Float,
     centerY: Float,
     centerRadius: Float,
@@ -34,11 +37,22 @@ fun DrawScope.drawDualSegmentButtons(
     buttonsPadding: Float,
     buttonColor: Color,
     selectedButtonColor: Color,
+    notchColor: Color,
+    activeNotchColor: Color,
     textRadialLayout: Boolean,
     padding: Float = 0f
 ) {
     buttons.forEachIndexed { index, button ->
-        val isSelected = selectedButton == side to index
+        val isPressed = selectedButton == side to index
+
+        // Визначаємо, чи кнопка активна (для notch індикатора)
+        val isActive = if (button.radioGroupId != null) {
+            // Якщо кнопка в радіогрупі - перевіряємо, чи вона вибрана в цій групі
+            selectedRadioButtons[button.radioGroupId] == (side to index)
+        } else {
+            // Якщо звичайна кнопка - активна тільки під час натискання
+            isPressed
+        }
 
         // Малюємо зовнішній сегмент (текст) - від middleRadius до outerRadius
         val outerPath = createButtonPath(
@@ -86,22 +100,39 @@ fun DrawScope.drawDualSegmentButtons(
         )
 
 
+        // Малюємо notch індикатор з відповідним кольором
         drawPath(
             path = notchIndicator,
-            color = selectedButtonColor,
+            color = if (isActive) activeNotchColor else notchColor,
             style = Fill
         )
 
         drawContext.canvas.saveLayer(size.toRect(), Paint())
         drawPath(
             path = resultPath,
-            color = if (isSelected) selectedButtonColor else buttonColor,
+            color = if (isPressed) selectedButtonColor else buttonColor,
+            style = Fill
+        )
+
+        // Додаємо 3D градієнт для об'ємності
+        val gradientBrush = Brush.verticalGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.3f),
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.2f)
+            ),
+            startY = centerY - centerRadius,
+            endY = centerY + centerRadius
+        )
+        drawPath(
+            path = resultPath,
+            brush = gradientBrush,
             style = Fill
         )
 
         drawPath(
             path = resultPath,
-            color = Color.Black,//White.copy(alpha = 0.3f),
+            color = Color.Black,
             style = Stroke(width = padding),
             blendMode = BlendMode.Clear
         )
@@ -118,7 +149,7 @@ fun DrawScope.drawDualSegmentButtons(
         )
 
         // Колір внутрішнього сегмента - затемнена версія зовнішнього
-        val innerSegmentColor = if (isSelected) {
+        val innerSegmentColor = if (isPressed) {
             selectedButtonColor.copy(
                 red = selectedButtonColor.red * 0.6f,
                 green = selectedButtonColor.green * 0.6f,
@@ -139,9 +170,16 @@ fun DrawScope.drawDualSegmentButtons(
             style = Fill
         )
 
+        // Додаємо 3D градієнт для об'ємності внутрішнього сегмента
         drawPath(
             path = innerPath,
-            color = Color.Black,//White.copy(alpha = 0.8f),
+            brush = gradientBrush,
+            style = Fill
+        )
+
+        drawPath(
+            path = innerPath,
+            color = Color.Black,
             style = Stroke(width = padding),
             blendMode = BlendMode.Clear
         )

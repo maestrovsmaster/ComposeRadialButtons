@@ -2,10 +2,16 @@ package android.test.testuiapplication
 
 import android.test.testuiapplication.circularbuttonlayout.EnhancedCircularButtonLayout
 import android.test.testuiapplication.circularbuttonlayout.data.CircularButtonData
+import android.test.testuiapplication.circularbuttonlayout.data.CircularLayoutTheme
+import android.test.testuiapplication.circularbuttonlayout.data.CenterButtonTheme
+import android.test.testuiapplication.circularbuttonlayout.data.MainButtonTheme
+import android.test.testuiapplication.circularbuttonlayout.data.IconButtonTheme
+import android.test.testuiapplication.circularbuttonlayout.data.UnderPolarTheme
 import android.test.testuiapplication.circularbuttonlayout.data.PolarButtonGroup
 import android.test.testuiapplication.circularbuttonlayout.data.Side
 import android.test.testuiapplication.circularbuttonlayout.components.CircularButton
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 
 /**
@@ -28,20 +36,24 @@ fun CarInterfaceExample() {
                 icon = "📻",  // Radio icon
                 text = "RADIO",
                 onClick = { Log.d("CarInterface", "RADIO clicked") },
-                iconColor = Color(0xFFFF9800)
+                iconColor = Color(0xFFFF9800),
+                radioGroupId = "media"  // RADIO і MUSIC в одній радіогрупі
+            ),
+            CircularButtonData(
+                icon = "♫",  // Music note
+                text = "MUSIC",
+                onClick = { Log.d("CarInterface", "MUSIC clicked") },
+                iconColor = Color(0xFFFF9800),
+                radioGroupId = "media"  // RADIO і MUSIC в одній радіогрупі
             ),
             CircularButtonData(
                 icon = "▲",  // Navigation triangle
                 text = "NAVI",
                 onClick = { Log.d("CarInterface", "NAVI clicked") },
                 iconColor = Color(0xFFFF9800)
+                // Без radioGroupId - звичайна кнопка
             ),
-            CircularButtonData(
-                icon = "♫",  // Music note
-                text = "MUSIC",
-                onClick = { Log.d("CarInterface", "MUSIC clicked") },
-                iconColor = Color(0xFFFF9800)
-            )
+
         )
     }
 
@@ -132,6 +144,28 @@ fun CarInterfaceExample() {
         iconColor = Color(0xFFFFFFFF)
     )
 
+    // Створюємо тему для UI
+    val theme = CircularLayoutTheme(
+        centerButton = CenterButtonTheme(
+            backgroundColor = Color(0xC91A1C1F),
+            textColor = Color.White,
+            textSize = 40f
+        ),
+        mainButtons = MainButtonTheme(
+            backgroundColor = Color(0xFF37474F),
+            activeBackgroundColor = Color(0xFFFF9800),
+            notchColor = Color(0xFFBDBDBD),
+            activeNotchColor = Color(0xFFFFEB3B)
+        ),
+        iconButtons = IconButtonTheme(
+            backgroundColor = Color(0xFF37474F),
+            activeBackgroundColor = Color(0xFFFF6B6B)
+        ),
+        underPolar = UnderPolarTheme(
+            backgroundColor = Color(0xAB1A1A1C)
+        )
+    )
+
     EnhancedCircularButtonLayout(
         modifier = Modifier.fillMaxSize(),
         leftButtons = leftButtons,
@@ -141,11 +175,7 @@ fun CarInterfaceExample() {
         topUnderPolarButton = topUnderPolarButton,
         bottomUnderPolarButton = bottomUnderPolarButton,
         centerLabel = "TRIAL",
-        centerColor = Color(0xFF2C3E50),
-        buttonColor = Color(0xFF37474F),
-        selectedButtonColor = Color(0xFFFF9800),
-        polarButtonColor = Color(0xFF37474F),  // Колір для полярних зон
-        underPolarColor = Color(0xFF334233),   // Зелений колір для under-polar зон
+        theme = theme,
         centerRadiusRatio = 0.5f,
         iconSegmentRadiusRatio = 1.6f,  // Радіус секції іконок = 160% від радіуса центрального кола
         outerRadiusRatio = 0.96f,
@@ -196,7 +226,21 @@ fun DirectCircularButtonExample() {
 fun CarInterfacePreview() {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxSize().background(Color.Blue)) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Фонове зображення
+                Image(
+                    painter = painterResource(id = R.drawable.car_lesser),
+                    contentDescription = "Background",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                // Чорний напівпрозорий шар поверх фону
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.8f))
+                )
+                // UI поверх всього
                 CarInterfaceExample()
             }
         }
