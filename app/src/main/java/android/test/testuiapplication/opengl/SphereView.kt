@@ -124,4 +124,18 @@ class SphereGLSurfaceView(
             renderer.triggerLightAnimation()
         }
     }
+
+    /**
+     * Запустити анімацію обертання сфери (для зміни тексту)
+     */
+    fun triggerSphereRotation() {
+        queueEvent {
+            renderer.triggerSphereRotation()
+        }
+    }
+
+    /**
+     * Отримати прогрес обертання сфери
+     */
+    fun getSphereRotationProgress(): Float = renderer.getSphereRotationProgress()
 }

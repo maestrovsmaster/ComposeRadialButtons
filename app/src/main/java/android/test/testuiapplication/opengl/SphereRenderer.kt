@@ -54,6 +54,13 @@ class SphereRenderer(
     private val lightAnimationDuration = 500f  // 500ms
     private var lightAnimationStartTime = 0L
 
+    // Анімація обертання сфери (для зміни тексту)
+    private var sphereRotationProgress = 0f  // 0..1
+    private var sphereRotationActive = false
+    private val sphereRotationDuration = 600f  // 600ms
+    private var sphereRotationStartTime = 0L
+    private var sphereRotationStartAngle = 0f
+
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         // Колір фону - прозорий
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
@@ -129,8 +136,32 @@ class SphereRenderer(
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
 
         // Оновити кут обертання сфери
-        rotationAngle += 0.5f
-        if (rotationAngle > 360f) rotationAngle -= 360f
+        if (!sphereRotationActive) {
+            // Нормальне повільне обертання
+            rotationAngle += 0.5f
+            if (rotationAngle > 360f) rotationAngle -= 360f
+        } else {
+            // Анімація швидкого обертання для зміни тексту
+            val currentTime = System.currentTimeMillis()
+            val elapsed = currentTime - sphereRotationStartTime
+            sphereRotationProgress = (elapsed / sphereRotationDuration).coerceIn(0f, 1f)
+
+            // Ease-in-out для плавності
+            val eased = if (sphereRotationProgress < 0.5f) {
+                2f * sphereRotationProgress * sphereRotationProgress
+            } else {
+                1f - 2f * (1f - sphereRotationProgress) * (1f - sphereRotationProgress)
+            }
+
+            // Оберт на 360 градусів
+            rotationAngle = sphereRotationStartAngle + eased * 360f
+
+            if (sphereRotationProgress >= 1f) {
+                sphereRotationActive = false
+                sphereRotationProgress = 0f
+                sphereRotationStartAngle = rotationAngle
+            }
+        }
 
         // Оновити анімацію світла
         if (lightAnimationActive) {
@@ -226,4 +257,19 @@ class SphereRenderer(
         lightAnimationProgress = 0f
         lightAnimationStartTime = System.currentTimeMillis()
     }
+
+    /**
+     * Запустити анімацію обертання сфери (для зміни тексту)
+     */
+    fun triggerSphereRotation() {
+        sphereRotationActive = true
+        sphereRotationProgress = 0f
+        sphereRotationStartTime = System.currentTimeMillis()
+        sphereRotationStartAngle = rotationAngle
+    }
+
+    /**
+     * Отримати прогрес обертання сфери (для синхронізації з текстом)
+     */
+    fun getSphereRotationProgress(): Float = sphereRotationProgress
 }

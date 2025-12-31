@@ -74,6 +74,44 @@ fun EnhancedCircularButtonLayout(
     // Reference на SphereGLSurfaceView для анімації світла
     var sphereView by remember { mutableStateOf<android.test.testuiapplication.opengl.SphereGLSurfaceView?>(null) }
 
+    // State для неонового тексту всередині сфери
+    var sphereText by remember { mutableStateOf("TRIAL") }
+    var sphereTextColor by remember { mutableStateOf(Color(0xFFFFD700)) }  // Золотистий за замовчуванням
+    var nextSphereText by remember { mutableStateOf<String?>(null) }  // Наступний текст для показу
+    var nextSphereTextColor by remember { mutableStateOf<Color?>(null) }
+    var textAlpha by remember { mutableStateOf(1.0f) }  // Альфа для fade ефекту
+
+    // Синхронізація fade ефекту з обертанням сфери
+    LaunchedEffect(showSphere) {
+        if (showSphere) {
+            while (true) {
+                kotlinx.coroutines.delay(16)  // ~60 FPS
+                val progress = sphereView?.getSphereRotationProgress() ?: 0f
+
+                if (progress > 0f) {
+                    // Fade out на першій половині (0.0 -> 0.5)
+                    // Fade in на другій половині (0.5 -> 1.0)
+                    textAlpha = if (progress < 0.5f) {
+                        // Fade out: 1.0 -> 0.0
+                        1.0f - (progress * 2f)
+                    } else {
+                        // На половині - змінюємо текст
+                        if (nextSphereText != null && progress >= 0.5f && textAlpha < 0.1f) {
+                            sphereText = nextSphereText!!
+                            sphereTextColor = nextSphereTextColor!!
+                            nextSphereText = null
+                            nextSphereTextColor = null
+                        }
+                        // Fade in: 0.0 -> 1.0
+                        (progress - 0.5f) * 2f
+                    }
+                } else {
+                    textAlpha = 1.0f
+                }
+            }
+        }
+    }
+
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val widthPx = with(density) { maxWidth.toPx() }
@@ -113,6 +151,12 @@ fun EnhancedCircularButtonLayout(
                             if (distance <= centerRadius) {
                                 tryAwaitRelease()
                                 sphereView?.triggerLightAnimation()  // Анімація світла
+
+                                // Підготувати новий текст та запустити обертання сфери
+                                nextSphereText = centerLabel
+                                nextSphereTextColor = Color(0xFFFFD700)  // Золотистий неон
+                                sphereView?.triggerSphereRotation()
+
                                 onCenterClick()
                                 return@detectTapGestures
                             }
@@ -130,6 +174,12 @@ fun EnhancedCircularButtonLayout(
                                         tryAwaitRelease()
                                         pressedPolarButton = null
                                         sphereView?.triggerLightAnimation()  // Анімація світла
+
+                                        // Підготувати новий текст та запустити обертання сфери
+                                        nextSphereText = group.title ?: ""
+                                        nextSphereTextColor = Color(0xFFFF6B6B)  // Червонуватий неон
+                                        sphereView?.triggerSphereRotation()
+
                                         if (polarSide == PolarSide.LEFT) {
                                             group.leftButton.onClick()
                                         } else {
@@ -150,6 +200,12 @@ fun EnhancedCircularButtonLayout(
                                         tryAwaitRelease()
                                         pressedPolarButton = null
                                         sphereView?.triggerLightAnimation()  // Анімація світла
+
+                                        // Підготувати новий текст та запустити обертання сфери
+                                        nextSphereText = group.title ?: ""
+                                        nextSphereTextColor = Color(0xFFFF6B6B)  // Червонуватий неон
+                                        sphereView?.triggerSphereRotation()
+
                                         if (polarSide == PolarSide.LEFT) {
                                             group.leftButton.onClick()
                                         } else {
@@ -176,6 +232,11 @@ fun EnhancedCircularButtonLayout(
 
                                         sphereView?.triggerLightAnimation()  // Анімація світла
 
+                                        // Підготувати новий текст та запустити обертання сфери
+                                        nextSphereText = button.text
+                                        nextSphereTextColor = Color(0xFFFFD700)  // Золотистий неон
+                                        sphereView?.triggerSphereRotation()
+
                                         // Якщо кнопка в радіогрупі - зберігаємо її як вибрану
                                         button.radioGroupId?.let { groupId ->
                                             selectedRadioButtons = selectedRadioButtons + (groupId to (Side.LEFT to index))
@@ -199,6 +260,11 @@ fun EnhancedCircularButtonLayout(
                                         pressedSideButton = null
 
                                         sphereView?.triggerLightAnimation()  // Анімація світла
+
+                                        // Підготувати новий текст та запустити обертання сфери
+                                        nextSphereText = button.text
+                                        nextSphereTextColor = Color(0xFFFFD700)  // Золотистий неон
+                                        sphereView?.triggerSphereRotation()
 
                                         // Якщо кнопка в радіогрупі - зберігаємо її як вибрану
                                         button.radioGroupId?.let { groupId ->
@@ -414,6 +480,14 @@ fun EnhancedCircularButtonLayout(
                         sphereView = view  // Зберігаємо reference для анімації
                     }
                 )
+
+                // Неоновий текст всередині сфери
+                NeonText(
+                    text = sphereText,
+                    color = sphereTextColor,
+                    modifier = Modifier.fillMaxSize(),
+                    alpha = textAlpha
+                )
             }
 
             // Додаємо напівпрозоре коло поверх сфери для кращої інтеграції
@@ -423,7 +497,7 @@ fun EnhancedCircularButtonLayout(
 
                 // Напівпрозорий затемнюючий градієнт по краях для плавного переходу
                 drawCircle(
-                    color = theme.centerButton.backgroundColor.copy(alpha = 0.3f),
+                    color = theme.centerButton.backgroundColor.copy(alpha = 0.15f),
                     radius = centerRadius,
                     center = Offset(centerX, centerY),
                     style = Fill
