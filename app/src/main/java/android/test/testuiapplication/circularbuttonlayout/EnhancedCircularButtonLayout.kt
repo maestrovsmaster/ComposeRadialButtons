@@ -71,6 +71,9 @@ fun EnhancedCircularButtonLayout(
     // State для радіогруп: Map<radioGroupId, Pair<Side, buttonIndex>>
     var selectedRadioButtons by remember { mutableStateOf<Map<String, Pair<Side, Int>>>(emptyMap()) }
 
+    // Reference на SphereGLSurfaceView для анімації світла
+    var sphereView by remember { mutableStateOf<android.test.testuiapplication.opengl.SphereGLSurfaceView?>(null) }
+
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val widthPx = with(density) { maxWidth.toPx() }
@@ -109,6 +112,7 @@ fun EnhancedCircularButtonLayout(
                             // Перевірка центральної кнопки
                             if (distance <= centerRadius) {
                                 tryAwaitRelease()
+                                sphereView?.triggerLightAnimation()  // Анімація світла
                                 onCenterClick()
                                 return@detectTapGestures
                             }
@@ -125,6 +129,7 @@ fun EnhancedCircularButtonLayout(
                                         pressedPolarButton = Triple(PolarZone.POLAR, polarSide, true)
                                         tryAwaitRelease()
                                         pressedPolarButton = null
+                                        sphereView?.triggerLightAnimation()  // Анімація світла
                                         if (polarSide == PolarSide.LEFT) {
                                             group.leftButton.onClick()
                                         } else {
@@ -144,6 +149,7 @@ fun EnhancedCircularButtonLayout(
                                         pressedPolarButton = Triple(PolarZone.POLAR, polarSide, false)
                                         tryAwaitRelease()
                                         pressedPolarButton = null
+                                        sphereView?.triggerLightAnimation()  // Анімація світла
                                         if (polarSide == PolarSide.LEFT) {
                                             group.leftButton.onClick()
                                         } else {
@@ -168,6 +174,8 @@ fun EnhancedCircularButtonLayout(
                                         tryAwaitRelease()
                                         pressedSideButton = null
 
+                                        sphereView?.triggerLightAnimation()  // Анімація світла
+
                                         // Якщо кнопка в радіогрупі - зберігаємо її як вибрану
                                         button.radioGroupId?.let { groupId ->
                                             selectedRadioButtons = selectedRadioButtons + (groupId to (Side.LEFT to index))
@@ -189,6 +197,8 @@ fun EnhancedCircularButtonLayout(
                                         pressedSideButton = Side.RIGHT to index
                                         tryAwaitRelease()
                                         pressedSideButton = null
+
+                                        sphereView?.triggerLightAnimation()  // Анімація світла
 
                                         // Якщо кнопка в радіогрупі - зберігаємо її як вибрану
                                         button.radioGroupId?.let { groupId ->
@@ -399,7 +409,10 @@ fun EnhancedCircularButtonLayout(
                 SphereView(
                     modifier = Modifier.fillMaxSize(),
                     color = theme.centerButton.backgroundColor,
-                    alpha = 1.0f
+                    alpha = 1.0f,
+                    onViewCreated = { view ->
+                        sphereView = view  // Зберігаємо reference для анімації
+                    }
                 )
             }
 

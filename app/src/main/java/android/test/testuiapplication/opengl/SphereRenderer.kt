@@ -9,6 +9,9 @@ import java.nio.FloatBuffer
 import java.nio.ShortBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.PI
 
 /**
  * Рендерер для 3D сфери з освітленням та обертанням
@@ -42,8 +45,14 @@ class SphereRenderer(
     private val mvpMatrix = FloatArray(16)
     private val tempMatrix = FloatArray(16)
 
-    // Кут обертання
+    // Кут обертання сфери
     private var rotationAngle = 0f
+
+    // Анімація обертання світла
+    private var lightAnimationProgress = 0f  // 0..1
+    private var lightAnimationActive = false
+    private val lightAnimationDuration = 500f  // 500ms
+    private var lightAnimationStartTime = 0L
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         // Колір фону - прозорий
@@ -119,9 +128,21 @@ class SphereRenderer(
     override fun onDrawFrame(gl: GL10?) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
 
-        // Оновити кут обертання
+        // Оновити кут обертання сфери
         rotationAngle += 0.5f
         if (rotationAngle > 360f) rotationAngle -= 360f
+
+        // Оновити анімацію світла
+        if (lightAnimationActive) {
+            val currentTime = System.currentTimeMillis()
+            val elapsed = currentTime - lightAnimationStartTime
+            lightAnimationProgress = (elapsed / lightAnimationDuration).coerceIn(0f, 1f)
+
+            if (lightAnimationProgress >= 1f) {
+                lightAnimationActive = false
+                lightAnimationProgress = 0f
+            }
+        }
 
         // Model matrix - обертання сфери
         Matrix.setIdentityM(modelMatrix, 0)
@@ -160,8 +181,18 @@ class SphereRenderer(
         GLES20.glUniformMatrix4fv(modelMatrixHandle, 1, false, modelMatrix, 0)
         GLES20.glUniformMatrix4fv(normalMatrixHandle, 1, false, normalMatrix, 0)
 
+        // Обчислити позицію світла (з анімацією обертання)
+        val lightRadius = 6f
+        val baseAngle = 45f  // Базовий кут в градусах
+        val animationAngle = lightAnimationProgress * 360f  // Повний оберт за анімацію
+        val totalAngle = (baseAngle + animationAngle) * (PI / 180f).toFloat()
+
+        val lightX = lightRadius * cos(totalAngle)
+        val lightY = 3f  // Фіксована висота
+        val lightZ = lightRadius * sin(totalAngle)
+
         // Передати параметри освітлення
-        GLES20.glUniform3f(lightPosHandle, 3f, 3f, 5f)  // Позиція світла
+        GLES20.glUniform3f(lightPosHandle, lightX, lightY, lightZ)  // Позиція світла (анімована)
         GLES20.glUniform3f(cameraPosHandle, 0f, 0f, 2.8f)  // Позиція камери (відповідає viewMatrix)
         GLES20.glUniform3f(baseColorHandle, baseColor[0], baseColor[1], baseColor[2])
 
@@ -185,5 +216,14 @@ class SphereRenderer(
         baseColor[0] = r
         baseColor[1] = g
         baseColor[2] = b
+    }
+
+    /**
+     * Запустити анімацію обертання світла (для feedback при кліку)
+     */
+    fun triggerLightAnimation() {
+        lightAnimationActive = true
+        lightAnimationProgress = 0f
+        lightAnimationStartTime = System.currentTimeMillis()
     }
 }

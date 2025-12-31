@@ -18,12 +18,15 @@ import androidx.compose.ui.viewinterop.AndroidView
 fun SphereView(
     modifier: Modifier = Modifier,
     color: Color = Color(0xFF2C3E50),  // Темно-синій за замовчуванням
-    alpha: Float = 1.0f
+    alpha: Float = 1.0f,
+    onViewCreated: ((SphereGLSurfaceView) -> Unit)? = null  // Callback для отримання reference на view
 ) {
     val context = LocalContext.current
 
     val glSurfaceView = remember {
-        createGLSurfaceView(context, color, alpha)
+        val view = SphereGLSurfaceView(context, color)
+        onViewCreated?.invoke(view)
+        view
     }
 
     AndroidView(
@@ -111,5 +114,14 @@ class SphereGLSurfaceView(
         val g = ((argb shr 8) and 0xFF) / 255f
         val b = (argb and 0xFF) / 255f
         renderer.setColor(r, g, b)
+    }
+
+    /**
+     * Запустити анімацію обертання світла навколо сфери
+     */
+    fun triggerLightAnimation() {
+        queueEvent {
+            renderer.triggerLightAnimation()
+        }
     }
 }
