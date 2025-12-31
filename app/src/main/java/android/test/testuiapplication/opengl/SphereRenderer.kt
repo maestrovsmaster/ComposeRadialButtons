@@ -57,8 +57,8 @@ class SphereRenderer(
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
 
-        // Створити сферу
-        sphere = Sphere(radius = 1.0f, latitudeBands = 40, longitudeBands = 40)
+        // Створити сферу (збільшений радіус для повного вписування в коло)
+        sphere = Sphere(radius = 1.28f, latitudeBands = 40, longitudeBands = 40)
 
         // Створити buffers для OpenGL
         vertexBuffer = ByteBuffer.allocateDirect(sphere.vertices.size * 4).run {
@@ -107,12 +107,12 @@ class SphereRenderer(
         // Projection matrix
         Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1f, 1f, 2f, 10f)
 
-        // View matrix - камера
+        // View matrix - камера (зменшено відстань для більшої сфери)
         Matrix.setLookAtM(
             viewMatrix, 0,
-            0f, 0f, 4f,  // Позиція камери
-            0f, 0f, 0f,  // Дивимось на центр
-            0f, 1f, 0f   // Up vector
+            0f, 0f, 2.8f,  // Позиція камери - ближче для кращого вписування
+            0f, 0f, 0f,    // Дивимось на центр
+            0f, 1f, 0f     // Up vector
         )
     }
 
@@ -162,7 +162,7 @@ class SphereRenderer(
 
         // Передати параметри освітлення
         GLES20.glUniform3f(lightPosHandle, 3f, 3f, 5f)  // Позиція світла
-        GLES20.glUniform3f(cameraPosHandle, 0f, 0f, 4f)  // Позиція камери
+        GLES20.glUniform3f(cameraPosHandle, 0f, 0f, 2.8f)  // Позиція камери (відповідає viewMatrix)
         GLES20.glUniform3f(baseColorHandle, baseColor[0], baseColor[1], baseColor[2])
 
         // Намалювати сферу
