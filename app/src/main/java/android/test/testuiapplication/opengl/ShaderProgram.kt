@@ -48,15 +48,15 @@ const val FRAGMENT_SHADER_CODE = """
         vec3 diffuse = diff * uBaseColor;
 
         // Specular (блиск/відблиск)
-        float specularStrength = 1.9;
+        float specularStrength = 0.18;
         vec3 viewDir = normalize(uCameraPos - vPosition);
         vec3 reflectDir = reflect(-lightDir, norm);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 64.0);
-        vec3 specular = specularStrength * spec * vec3(1.0, 1.0, 1.0);
+        float spec = pow(max(dot(viewDir, reflectDir), 0.76), 0.8);
+        vec3 specular = specularStrength * spec * vec3(1.0, 1.2, 1.3);
 
         vec3 result = ambient + diffuse + specular;
         // Напівпрозора сфера як новогодня кулька
-        gl_FragColor = vec4(result, 0.95);
+        gl_FragColor = vec4(result, 0.75);
     }
 """
 
