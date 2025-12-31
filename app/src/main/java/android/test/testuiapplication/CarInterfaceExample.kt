@@ -154,8 +154,8 @@ fun CarInterfaceExample() {
         mainButtons = MainButtonTheme(
             backgroundColor = Color(0xFF37474F),
             activeBackgroundColor = Color(0xFFFF9800),
-            notchColor = Color(0xFFBDBDBD),
-            activeNotchColor = Color(0xFFFFEB3B)
+            notchColor = Color(0xFF4A4A4A),          // Темно-сірий для неактивного
+            activeNotchColor = Color(0xFFFF6B35)     // Теплий червоно-помаранчевий для активного
         ),
         iconButtons = IconButtonTheme(
             backgroundColor = Color(0xFF37474F),
@@ -181,7 +181,8 @@ fun CarInterfaceExample() {
         outerRadiusRatio = 0.96f,
         buttonsPaddingRatio = 0.01f,    // 1% padding зверху/знизу
         textRadialLayout = true,        // Радіальне розташування тексту
-        circlePaddingRatio = 0.15f      // 15% padding для центрального кола
+        circlePaddingRatio = 0.15f,     // 15% padding для центрального кола
+        showSphere = true               // Показати 3D сферу в центрі
     )
 }
 

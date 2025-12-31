@@ -21,8 +21,10 @@ data class MainButtonTheme(
     val activeBackgroundColor: Color = Color(0xFFFF9800),
     val notchColor: Color = Color(0xFFBDBDBD),          // Колір notch для неактивної кнопки
     val activeNotchColor: Color = Color(0xFFFFEB3B),    // Колір notch для активної кнопки
-    val textColor: Color = Color.White,
-    val activeTextColor: Color = Color.White
+    val textColor: Color = Color(0xFF888888),           // Сірий текст для неактивної кнопки
+    val activeTextColor: Color = Color(0xFFFFCC99),     // Теплий підсвічений текст для активної
+    val iconColor: Color = Color(0xFF666666),           // Сіра іконка для неактивної кнопки
+    val activeIconColor: Color = Color(0xFFFF9966)      // Теплий помаранчевий для активної іконки
 )
 
 /**

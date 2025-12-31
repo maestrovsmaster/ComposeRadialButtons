@@ -1,0 +1,189 @@
+package android.test.testuiapplication.opengl
+
+import android.opengl.GLES20
+import android.opengl.GLSurfaceView
+import android.opengl.Matrix
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.FloatBuffer
+import java.nio.ShortBuffer
+import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.opengles.GL10
+
+/**
+ * Рендерер для 3D сфери з освітленням та обертанням
+ */
+class SphereRenderer(
+    private val baseColor: FloatArray = floatArrayOf(0.2f, 0.3f, 0.5f) // Темно-синій за замовчуванням
+) : GLSurfaceView.Renderer {
+
+    private lateinit var sphere: Sphere
+    private lateinit var vertexBuffer: FloatBuffer
+    private lateinit var normalBuffer: FloatBuffer
+    private lateinit var indexBuffer: ShortBuffer
+
+    private var shaderProgram: Int = 0
+
+    // Handles для shader uniforms/attributes
+    private var positionHandle: Int = 0
+    private var normalHandle: Int = 0
+    private var mvpMatrixHandle: Int = 0
+    private var modelMatrixHandle: Int = 0
+    private var normalMatrixHandle: Int = 0
+    private var lightPosHandle: Int = 0
+    private var cameraPosHandle: Int = 0
+    private var baseColorHandle: Int = 0
+
+    // Матриці трансформації
+    private val projectionMatrix = FloatArray(16)
+    private val viewMatrix = FloatArray(16)
+    private val modelMatrix = FloatArray(16)
+    private val normalMatrix = FloatArray(16)
+    private val mvpMatrix = FloatArray(16)
+    private val tempMatrix = FloatArray(16)
+
+    // Кут обертання
+    private var rotationAngle = 0f
+
+    override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        // Колір фону - прозорий
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f)
+
+        // Увімкнути depth test для правильного рендерингу 3D
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST)
+        GLES20.glDepthFunc(GLES20.GL_LEQUAL)
+
+        // Увімкнути blending для прозорості
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+
+        // Створити сферу
+        sphere = Sphere(radius = 1.0f, latitudeBands = 40, longitudeBands = 40)
+
+        // Створити buffers для OpenGL
+        vertexBuffer = ByteBuffer.allocateDirect(sphere.vertices.size * 4).run {
+            order(ByteOrder.nativeOrder())
+            asFloatBuffer().apply {
+                put(sphere.vertices)
+                position(0)
+            }
+        }
+
+        normalBuffer = ByteBuffer.allocateDirect(sphere.normals.size * 4).run {
+            order(ByteOrder.nativeOrder())
+            asFloatBuffer().apply {
+                put(sphere.normals)
+                position(0)
+            }
+        }
+
+        indexBuffer = ByteBuffer.allocateDirect(sphere.indices.size * 2).run {
+            order(ByteOrder.nativeOrder())
+            asShortBuffer().apply {
+                put(sphere.indices)
+                position(0)
+            }
+        }
+
+        // Компілювати шейдери
+        shaderProgram = ShaderUtils.createProgram(VERTEX_SHADER_CODE, FRAGMENT_SHADER_CODE)
+
+        // Отримати handles
+        positionHandle = GLES20.glGetAttribLocation(shaderProgram, "aPosition")
+        normalHandle = GLES20.glGetAttribLocation(shaderProgram, "aNormal")
+        mvpMatrixHandle = GLES20.glGetUniformLocation(shaderProgram, "uMVPMatrix")
+        modelMatrixHandle = GLES20.glGetUniformLocation(shaderProgram, "uModelMatrix")
+        normalMatrixHandle = GLES20.glGetUniformLocation(shaderProgram, "uNormalMatrix")
+        lightPosHandle = GLES20.glGetUniformLocation(shaderProgram, "uLightPos")
+        cameraPosHandle = GLES20.glGetUniformLocation(shaderProgram, "uCameraPos")
+        baseColorHandle = GLES20.glGetUniformLocation(shaderProgram, "uBaseColor")
+    }
+
+    override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
+        GLES20.glViewport(0, 0, width, height)
+
+        val ratio = width.toFloat() / height.toFloat()
+
+        // Projection matrix
+        Matrix.frustumM(projectionMatrix, 0, -ratio, ratio, -1f, 1f, 2f, 10f)
+
+        // View matrix - камера
+        Matrix.setLookAtM(
+            viewMatrix, 0,
+            0f, 0f, 4f,  // Позиція камери
+            0f, 0f, 0f,  // Дивимось на центр
+            0f, 1f, 0f   // Up vector
+        )
+    }
+
+    override fun onDrawFrame(gl: GL10?) {
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+
+        // Оновити кут обертання
+        rotationAngle += 0.5f
+        if (rotationAngle > 360f) rotationAngle -= 360f
+
+        // Model matrix - обертання сфери
+        Matrix.setIdentityM(modelMatrix, 0)
+        Matrix.rotateM(modelMatrix, 0, rotationAngle, 0f, 1f, 0f)  // Обертання навколо Y
+        Matrix.rotateM(modelMatrix, 0, rotationAngle * 0.5f, 1f, 0f, 0f)  // Трохи навколо X
+
+        // Normal matrix (для правильного освітлення при трансформаціях)
+        Matrix.invertM(tempMatrix, 0, modelMatrix, 0)
+        Matrix.transposeM(normalMatrix, 0, tempMatrix, 0)
+
+        // MVP matrix
+        Matrix.multiplyMM(tempMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, tempMatrix, 0)
+
+        // Використати shader program
+        GLES20.glUseProgram(shaderProgram)
+
+        // Передати vertices
+        GLES20.glEnableVertexAttribArray(positionHandle)
+        GLES20.glVertexAttribPointer(
+            positionHandle, 3,
+            GLES20.GL_FLOAT, false,
+            12, vertexBuffer
+        )
+
+        // Передати normals
+        GLES20.glEnableVertexAttribArray(normalHandle)
+        GLES20.glVertexAttribPointer(
+            normalHandle, 3,
+            GLES20.GL_FLOAT, false,
+            12, normalBuffer
+        )
+
+        // Передати матриці
+        GLES20.glUniformMatrix4fv(mvpMatrixHandle, 1, false, mvpMatrix, 0)
+        GLES20.glUniformMatrix4fv(modelMatrixHandle, 1, false, modelMatrix, 0)
+        GLES20.glUniformMatrix4fv(normalMatrixHandle, 1, false, normalMatrix, 0)
+
+        // Передати параметри освітлення
+        GLES20.glUniform3f(lightPosHandle, 3f, 3f, 5f)  // Позиція світла
+        GLES20.glUniform3f(cameraPosHandle, 0f, 0f, 4f)  // Позиція камери
+        GLES20.glUniform3f(baseColorHandle, baseColor[0], baseColor[1], baseColor[2])
+
+        // Намалювати сферу
+        GLES20.glDrawElements(
+            GLES20.GL_TRIANGLES,
+            sphere.vertexCount,
+            GLES20.GL_UNSIGNED_SHORT,
+            indexBuffer
+        )
+
+        // Вимкнути arrays
+        GLES20.glDisableVertexAttribArray(positionHandle)
+        GLES20.glDisableVertexAttribArray(normalHandle)
+    }
+
+    /**
+     * Змінити колір сфери динамічно
+     */
+    fun setColor(r: Float, g: Float, b: Float) {
+        baseColor[0] = r
+        baseColor[1] = g
+        baseColor[2] = b
+    }
+}

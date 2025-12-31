@@ -4,6 +4,7 @@ import android.test.testuiapplication.circularbuttonlayout.data.CircularButtonDa
 import android.test.testuiapplication.circularbuttonlayout.data.Side
 import android.test.testuiapplication.circularbuttonlayout.geometry.createButtonPath
 import android.test.testuiapplication.circularbuttonlayout.geometry.createNotchPath
+import android.test.testuiapplication.circularbuttonlayout.geometry.visualIndex
 import android.test.testuiapplication.circularbuttonlayout.utils.drawCenteredText
 import android.test.testuiapplication.circularbuttonlayout.utils.getIconPosition
 import android.test.testuiapplication.circularbuttonlayout.utils.getTextPosition
@@ -39,6 +40,10 @@ fun DrawScope.drawDualSegmentButtons(
     selectedButtonColor: Color,
     notchColor: Color,
     activeNotchColor: Color,
+    textColor: Color,
+    activeTextColor: Color,
+    iconColor: Color,
+    activeIconColor: Color,
     textRadialLayout: Boolean,
     padding: Float = 0f
 ) {
@@ -100,12 +105,63 @@ fun DrawScope.drawDualSegmentButtons(
         )
 
 
-        // Малюємо notch індикатор з відповідним кольором
-        drawPath(
-            path = notchIndicator,
-            color = if (isActive) activeNotchColor else notchColor,
-            style = Fill
-        )
+        // Малюємо notch індикатор з градієнтом для ефекту лампочки
+        if (isActive) {
+            // Активна notch - теплий світловий ефект з градієнтами
+            // Обчислюємо центр notch для радіального градієнта
+            val vIndex = visualIndex(index, buttons.size, side)
+            val h = (2 * centerRadius) / buttons.size
+            val notchCenterY = centerY - centerRadius + vIndex * h + h
+            val notchCenterX = if (side == Side.LEFT) {
+                centerX - (centerRadius + outerRadius) / 2
+            } else {
+                centerX + (centerRadius + outerRadius) / 2
+            }
+
+            // Базовий колір лампочки
+            drawPath(
+                path = notchIndicator,
+                color = activeNotchColor.copy(alpha = 0.9f),
+                style = Fill
+            )
+
+            // Додаємо радіальний градієнт для ефекту світіння (яскравий центр)
+            val glowBrush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFFFAA66),  // Яскравий теплий центр (майже білий з жовтим відтінком)
+                    activeNotchColor,    // Основний червоно-помаранчевий
+                    activeNotchColor.copy(alpha = 0.6f)  // Затемнення по краях
+                ),
+                center = Offset(notchCenterX, notchCenterY),
+                radius = 50f
+            )
+            drawPath(
+                path = notchIndicator,
+                brush = glowBrush,
+                style = Fill
+            )
+
+            // Додаємо вертикальний градієнт для об'ємності (світло зверху)
+            val depthBrush = Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.4f),  // Блик зверху
+                    Color.Transparent,
+                    Color.Black.copy(alpha = 0.3f)   // Тінь знизу
+                )
+            )
+            drawPath(
+                path = notchIndicator,
+                brush = depthBrush,
+                style = Fill
+            )
+        } else {
+            // Неактивна notch - простий сірий колір без градієнтів
+            drawPath(
+                path = notchIndicator,
+                color = notchColor,
+                style = Fill
+            )
+        }
 
         drawContext.canvas.saveLayer(size.toRect(), Paint())
         drawPath(
@@ -224,7 +280,7 @@ fun DrawScope.drawDualSegmentButtons(
             textPos.x,
             textPos.y,
             32f,
-            button.textColor
+            if (isActive) activeTextColor else textColor
         )
 
         // Малюємо іконку у внутрішньому сегменті (радіально по колу)
@@ -242,7 +298,7 @@ fun DrawScope.drawDualSegmentButtons(
             iconPos.x,
             iconPos.y,
             48f,
-            button.iconColor
+            if (isActive) activeIconColor else iconColor
         )
     }
 }

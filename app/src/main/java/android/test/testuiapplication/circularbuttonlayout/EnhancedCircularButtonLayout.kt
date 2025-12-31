@@ -12,11 +12,17 @@ import android.test.testuiapplication.circularbuttonlayout.drawing.drawPolarButt
 import android.test.testuiapplication.circularbuttonlayout.drawing.drawUnderPolarZone
 import android.test.testuiapplication.circularbuttonlayout.touch.isPointInButton
 import android.test.testuiapplication.circularbuttonlayout.touch.isPointInPolarZone
+import android.test.testuiapplication.opengl.SphereView
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -29,6 +35,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import kotlin.Float
 import kotlin.math.*
 
@@ -54,7 +61,8 @@ fun EnhancedCircularButtonLayout(
     buttonsPaddingRatio: Float = 0.0f,    // Padding зверху/знизу для бічних кнопок (0.0 - 0.5)
     textRadialLayout: Boolean = false,    // true = радіальне розташування тексту, false = вертикальне
     circlePaddingRatio: Float = 0.0f ,     // Padding для центрального кола (0.0 - 0.5)
-    elementsPadding: Float = 8f  // Paddings between elements (0.0 - 20.0)
+    elementsPadding: Float = 8f,  // Paddings between elements (0.0 - 20.0)
+    showSphere: Boolean = false  // Показати 3D сферу в центрі
 ) {
     // State для натиснутої кнопки (тільки під час натискання)
     var pressedSideButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
@@ -215,6 +223,10 @@ fun EnhancedCircularButtonLayout(
                 selectedButtonColor = theme.mainButtons.activeBackgroundColor,
                 notchColor = theme.mainButtons.notchColor,
                 activeNotchColor = theme.mainButtons.activeNotchColor,
+                textColor = theme.mainButtons.textColor,
+                activeTextColor = theme.mainButtons.activeTextColor,
+                iconColor = theme.mainButtons.iconColor,
+                activeIconColor = theme.mainButtons.activeIconColor,
                 textRadialLayout = textRadialLayout,
                 padding = elementsPadding
             )
@@ -235,6 +247,10 @@ fun EnhancedCircularButtonLayout(
                 selectedButtonColor = theme.mainButtons.activeBackgroundColor,
                 notchColor = theme.mainButtons.notchColor,
                 activeNotchColor = theme.mainButtons.activeNotchColor,
+                textColor = theme.mainButtons.textColor,
+                activeTextColor = theme.mainButtons.activeTextColor,
+                iconColor = theme.mainButtons.iconColor,
+                activeIconColor = theme.mainButtons.activeIconColor,
                 textRadialLayout = textRadialLayout,
                 padding = elementsPadding
             )
@@ -317,34 +333,99 @@ fun EnhancedCircularButtonLayout(
                 }
             }
 
-            // Малюємо центральну кнопку
-            drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
+            // Малюємо центральну кнопку (якщо немає сфери - звичайний фон, якщо є - напівпрозорий)
+            if (!showSphere) {
+                drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
 
-            drawCircle(
-                color = theme.centerButton.backgroundColor,
-                radius = centerRadius,
-                center = Offset(centerX, centerY),
-                style = Fill
-            )
+                drawCircle(
+                    color = theme.centerButton.backgroundColor,
+                    radius = centerRadius,
+                    center = Offset(centerX, centerY),
+                    style = Fill
+                )
 
-            drawCircle(
-                color = Color.White,
-                radius = centerRadius,
-                center = Offset(centerX, centerY),
-                style = Stroke(width = elementsPadding),
-                blendMode = BlendMode.Clear
-            )
-            drawContext.canvas.restore()
+                drawCircle(
+                    color = Color.White,
+                    radius = centerRadius,
+                    center = Offset(centerX, centerY),
+                    style = Stroke(width = elementsPadding),
+                    blendMode = BlendMode.Clear
+                )
+                drawContext.canvas.restore()
 
-            drawContext.canvas.nativeCanvas.apply {
-                val paint = Paint().apply {
-                    this.color = theme.centerButton.textColor.toArgb()
-                    this.textAlign = Paint.Align.CENTER
-                    this.textSize = theme.centerButton.textSize
-                    this.isFakeBoldText = true
-                    this.isAntiAlias = true
+                drawContext.canvas.nativeCanvas.apply {
+                    val paint = Paint().apply {
+                        this.color = theme.centerButton.textColor.toArgb()
+                        this.textAlign = Paint.Align.CENTER
+                        this.textSize = theme.centerButton.textSize
+                        this.isFakeBoldText = true
+                        this.isAntiAlias = true
+                    }
+                    this.drawText(centerLabel, centerX, centerY + 15f, paint)
                 }
-                this.drawText(centerLabel, centerX, centerY + 15f, paint)
+            } else {
+                // Тільки border для сфери
+                drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
+                drawCircle(
+                    color = Color.White,
+                    radius = centerRadius,
+                    center = Offset(centerX, centerY),
+                    style = Stroke(width = elementsPadding),
+                    blendMode = BlendMode.Clear
+                )
+                drawContext.canvas.restore()
+            }
+        }
+
+        // Додаємо 3D сферу в центр (якщо showSphere == true)
+        if (showSphere) {
+            val density = LocalDensity.current
+            val sphereDiameter = with(density) { (centerRadius * 2).toDp() }
+            val sphereOffset = with(density) {
+                val centerX = widthPx / 2f
+                val centerY = heightPx / 2f
+                androidx.compose.ui.unit.DpOffset(
+                    (centerX - centerRadius).toDp(),
+                    (centerY - centerRadius).toDp()
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(sphereDiameter)
+                    .offset(sphereOffset.x, sphereOffset.y)
+                    .clip(CircleShape)  // Обрізаємо до круглої форми
+            ) {
+                SphereView(
+                    modifier = Modifier.fillMaxSize(),
+                    color = theme.centerButton.backgroundColor,
+                    alpha = 1.0f
+                )
+            }
+
+            // Додаємо напівпрозоре коло поверх сфери для кращої інтеграції
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val centerX = size.width / 2f
+                val centerY = size.height / 2f
+
+                // Напівпрозорий затемнюючий градієнт по краях для плавного переходу
+                drawCircle(
+                    color = theme.centerButton.backgroundColor.copy(alpha = 0.3f),
+                    radius = centerRadius,
+                    center = Offset(centerX, centerY),
+                    style = Fill
+                )
+
+                // Border поверх всього
+                drawContext.canvas.saveLayer(size.toRect(), androidx.compose.ui.graphics.Paint())
+                drawCircle(
+                    color = Color.White,
+                    radius = centerRadius,
+                    center = Offset(centerX, centerY),
+                    style = Stroke(width = elementsPadding),
+                    blendMode = BlendMode.Clear
+                )
+                drawContext.canvas.restore()
             }
         }
     }
