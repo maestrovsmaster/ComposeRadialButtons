@@ -3,17 +3,17 @@ package android.test.testuiapplication.circularbuttonlayout.data
 import androidx.compose.ui.graphics.Color
 
 /**
- * Група полярних кнопок (верхня або нижня зона)
- * Візуально виглядає як одна область, але містить дві окремі кнопки
+ * Polar button group (top or bottom zone)
+ * Visually appears as single area, but contains two separate buttons
  */
 data class PolarButtonGroup(
-    val leftButton: CircularButtonData,   // Ліва половина
-    val rightButton: CircularButtonData,  // Права половина
-    val title: String? = null,            // Заголовок по центру
-    val subtitle: String? = null,         // Підзаголовок по центру
-    val titleSize: Float = 32f,           // Розмір тексту заголовка
-    val titleColor: Color = Color.White,  // Колір тексту заголовка
-    val subtitleSize: Float = 24f,        // Розмір тексту підзаголовка
-    val subtitleColor: Color = Color.White.copy(alpha = 0.7f), // Колір тексту підзаголовка
-    val iconOffsetFromEdge: Float = 0.12f // Відступ іконок від краю компонента (0.0 - 0.5)
+    val leftButton: CircularButtonData,   // Left half
+    val rightButton: CircularButtonData,  // Right half
+    val title: String? = null,            // Title in center
+    val subtitle: String? = null,         // Subtitle in center
+    val titleSize: Float = 32f,           // Title text size
+    val titleColor: Color = Color.White,  // Title text color
+    val subtitleSize: Float = 24f,        // Subtitle text size
+    val subtitleColor: Color = Color.White.copy(alpha = 0.7f), // Subtitle text color
+    val iconOffsetFromEdge: Float = 0.12f // Icon offset from component edge (0.0 - 0.5)
 )

@@ -15,7 +15,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import kotlin.math.*
 
 /**
- * Малює under-polar зону (верхню або нижню) - горизонтальний сегмент між middleRadius та outerRadius
+ * Draws under-polar zone (top or bottom) - horizontal segment between middleRadius and outerRadius
  */
 fun DrawScope.drawUnderPolarZone(
     button: CircularButtonData,
@@ -29,7 +29,7 @@ fun DrawScope.drawUnderPolarZone(
     underPolarColor: Color,
     padding: Float = 0f
 ) {
-    // Y координати для under-polar зони
+    // Y coordinates for under-polar zone
     val yTop = if (isTop) {
         centerY - outerRadius
     } else {
@@ -41,13 +41,13 @@ fun DrawScope.drawUnderPolarZone(
         centerY + outerRadius
     }
 
-    // Обчислюємо кути
+    // Calculate angles
     val angleTopInner = asin(max(-1f, min(1f, (yTop - centerY) / middleRadius)))
     val angleBottomInner = asin(max(-1f, min(1f, (yBottom - centerY) / middleRadius)))
     val angleTopOuter = asin(max(-1f, min(1f, (yTop - centerY) / outerRadius)))
     val angleBottomOuter = asin(max(-1f, min(1f, (yBottom - centerY) / outerRadius)))
 
-    // Обчислюємо X координати
+    // Calculate X coordinates
     val xLeftOuterTop = centerX - sqrt(max(0f, outerRadius * outerRadius - (yTop - centerY) * (yTop - centerY)))
     val xRightOuterTop = centerX + sqrt(max(0f, outerRadius * outerRadius - (yTop - centerY) * (yTop - centerY)))
     val xLeftOuterBottom = centerX - sqrt(max(0f, outerRadius * outerRadius - (yBottom - centerY) * (yBottom - centerY)))
@@ -58,7 +58,7 @@ fun DrawScope.drawUnderPolarZone(
     val xLeftInnerBottom = centerX - sqrt(max(0f, middleRadius * middleRadius - (yBottom - centerY) * (yBottom - centerY)))
     val xRightInnerBottom = centerX + sqrt(max(0f, middleRadius * middleRadius - (yBottom - centerY) * (yBottom - centerY)))
 
-    // Створюємо path
+    // Create path
     val path = Path().apply {
         moveTo(xLeftOuterTop, yTop)
         lineTo(xRightOuterTop, yTop)
@@ -81,7 +81,7 @@ fun DrawScope.drawUnderPolarZone(
 
         close()
 
-        // Вирізаємо внутрішню частину
+        // Cut out inner part
         moveTo(xLeftInnerTop, yTop)
         lineTo(xRightInnerTop, yTop)
 
@@ -122,7 +122,7 @@ fun DrawScope.drawUnderPolarZone(
 
     drawContext.canvas.restore()
 
-    // Малюємо іконку
+    // Draw icon
     val iconY = (yTop + yBottom) / 2 + 18f
     drawContext.canvas.nativeCanvas.drawCenteredText(
         button.icon,

@@ -138,4 +138,17 @@ class SphereGLSurfaceView(
      * Отримати прогрес обертання сфери
      */
     fun getSphereRotationProgress(): Float = renderer.getSphereRotationProgress()
+
+    /**
+     * Встановити колір контенту для рефлексії
+     */
+    fun setContentColor(color: Color) {
+        val argb = color.toArgb()
+        val r = ((argb shr 16) and 0xFF) / 255f
+        val g = ((argb shr 8) and 0xFF) / 255f
+        val b = (argb and 0xFF) / 255f
+        queueEvent {
+            renderer.setContentColor(r, g, b)
+        }
+    }
 }

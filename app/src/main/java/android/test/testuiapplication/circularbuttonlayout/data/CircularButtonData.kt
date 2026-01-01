@@ -3,13 +3,14 @@ package android.test.testuiapplication.circularbuttonlayout.data
 import androidx.compose.ui.graphics.Color
 
 /**
- * Дані для однієї кнопки з іконкою та текстом
+ * Data for single button with icon and text
  */
 data class CircularButtonData(
-    val icon: String,           // Іконка (або emoji)
-    val text: String,           // Текст
+    val icon: String,           // Icon (or emoji)
+    val text: String,           // Text
     val onClick: () -> Unit,
-    val iconColor: Color = Color(0xFFFF9800),  // Помаранчевий за замовчуванням
+    val onIconClick: (() -> Unit)? = null,  // Separate click on icon (if null - onClick is used)
+    val iconColor: Color = Color(0xFFFF9800),  // Orange by default
     val textColor: Color = Color.White,
-    val radioGroupId: String? = null  // ID радіогрупи для взаємовиключних кнопок (як RADIO/MUSIC)
+    val radioGroupId: String? = null  // Radio group ID for mutually exclusive buttons (like RADIO/MUSIC)
 )

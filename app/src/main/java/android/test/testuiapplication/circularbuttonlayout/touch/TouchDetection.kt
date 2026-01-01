@@ -41,7 +41,7 @@ fun isPointInButton(
 }
 
 /**
- * Перевіряє, чи точка знаходиться в полярній зоні, і повертає сторону (LEFT/RIGHT) або null
+ * Check if point is in polar zone and return side (LEFT/RIGHT) or null
  */
 fun isPointInPolarZone(
     point: Offset,
@@ -52,7 +52,7 @@ fun isPointInPolarZone(
     middleRadius: Float,
     buttonsPadding: Float
 ): PolarSide? {
-    // Y координати для полярної зони
+    // Y coordinates for polar zone
     val yTop = if (isTop) {
         centerY - middleRadius
     } else {
@@ -64,16 +64,34 @@ fun isPointInPolarZone(
         centerY + middleRadius
     }
 
-    // Перевірка чи точка в межах Y
+    // Check if point is within Y bounds
     if (point.y !in yTop..yBottom) return null
 
-    // Перевірка відстані від центру (має бути між centerRadius та middleRadius)
+    // Check distance from center (must be between centerRadius and middleRadius)
     val dx = point.x - centerX
     val dy = point.y - centerY
     val distance = sqrt(dx * dx + dy * dy)
 
     if (distance < centerRadius || distance > middleRadius) return null
 
-    // Визначення сторони (ліва чи права)
+    // Determine side (left or right)
     return if (point.x < centerX) PolarSide.LEFT else PolarSide.RIGHT
+}
+
+/**
+ * Check if point is in icon segment (between innerRadius and middleRadius)
+ * Returns true if point is in icon segment, false if in text segment
+ */
+fun isPointInIconSegment(
+    point: Offset,
+    centerX: Float,
+    centerY: Float,
+    innerRadius: Float,
+    middleRadius: Float
+): Boolean {
+    val dx = point.x - centerX
+    val dy = point.y - centerY
+    val distance = sqrt(dx * dx + dy * dy)
+
+    return distance in innerRadius..middleRadius
 }

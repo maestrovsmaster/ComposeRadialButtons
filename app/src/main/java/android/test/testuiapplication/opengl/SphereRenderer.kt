@@ -36,6 +36,7 @@ class SphereRenderer(
     private var lightPosHandle: Int = 0
     private var cameraPosHandle: Int = 0
     private var baseColorHandle: Int = 0
+    private var contentColorHandle: Int = 0  // Колір контенту для рефлексії
 
     // Матриці трансформації
     private val projectionMatrix = FloatArray(16)
@@ -44,6 +45,9 @@ class SphereRenderer(
     private val normalMatrix = FloatArray(16)
     private val mvpMatrix = FloatArray(16)
     private val tempMatrix = FloatArray(16)
+
+    // Колір контенту для рефлексії
+    private val contentColor = FloatArray(3) { 1.0f }  // Білий за замовчуванням
 
     // Кут обертання сфери
     private var rotationAngle = 0f
@@ -113,6 +117,9 @@ class SphereRenderer(
         lightPosHandle = GLES20.glGetUniformLocation(shaderProgram, "uLightPos")
         cameraPosHandle = GLES20.glGetUniformLocation(shaderProgram, "uCameraPos")
         baseColorHandle = GLES20.glGetUniformLocation(shaderProgram, "uBaseColor")
+        contentColorHandle = GLES20.glGetUniformLocation(shaderProgram, "uContentColor")
+
+        android.util.Log.d("SphereRenderer", "contentColorHandle = $contentColorHandle (should be >= 0)")
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -226,6 +233,7 @@ class SphereRenderer(
         GLES20.glUniform3f(lightPosHandle, lightX, lightY, lightZ)  // Позиція світла (анімована)
         GLES20.glUniform3f(cameraPosHandle, 0f, 0f, 2.8f)  // Позиція камери (відповідає viewMatrix)
         GLES20.glUniform3f(baseColorHandle, baseColor[0], baseColor[1], baseColor[2])
+        GLES20.glUniform3f(contentColorHandle, contentColor[0], contentColor[1], contentColor[2])
 
         // Намалювати сферу
         GLES20.glDrawElements(
@@ -272,4 +280,14 @@ class SphereRenderer(
      * Отримати прогрес обертання сфери (для синхронізації з текстом)
      */
     fun getSphereRotationProgress(): Float = sphereRotationProgress
+
+    /**
+     * Встановити колір контенту для рефлексії на внутрішній поверхні сфери
+     */
+    fun setContentColor(r: Float, g: Float, b: Float) {
+        contentColor[0] = r
+        contentColor[1] = g
+        contentColor[2] = b
+        android.util.Log.d("SphereRenderer", "Content color set to RGB($r, $g, $b)")
+    }
 }
