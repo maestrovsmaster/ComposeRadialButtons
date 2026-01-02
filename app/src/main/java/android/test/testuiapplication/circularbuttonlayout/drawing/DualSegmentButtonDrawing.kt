@@ -5,6 +5,7 @@ import android.test.testuiapplication.circularbuttonlayout.data.Side
 import android.test.testuiapplication.circularbuttonlayout.geometry.createButtonPath
 import android.test.testuiapplication.circularbuttonlayout.geometry.createNotchPath
 import android.test.testuiapplication.circularbuttonlayout.geometry.visualIndex
+import android.test.testuiapplication.circularbuttonlayout.touch.isPointInIconSegment
 import android.test.testuiapplication.circularbuttonlayout.utils.drawCenteredText
 import android.test.testuiapplication.circularbuttonlayout.utils.getIconPosition
 import android.test.testuiapplication.circularbuttonlayout.utils.getTextPosition
@@ -45,10 +46,11 @@ fun DrawScope.drawDualSegmentButtons(
     iconColor: Color,
     activeIconColor: Color,
     textRadialLayout: Boolean,
-    padding: Float = 0f
+    padding: Float = 0f,
 ) {
     buttons.forEachIndexed { index, button ->
         val isPressed = selectedButton == side to index
+
 
         // Визначаємо, чи кнопка активна (для notch індикатора)
         val isActive = if (button.radioGroupId != null) {

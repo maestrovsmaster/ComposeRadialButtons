@@ -86,6 +86,7 @@ fun EnhancedCircularButtonLayout(
 
     // State for pressed button (only during press)
     var pressedSideButton by remember { mutableStateOf<Pair<Side, Int>?>(null) }
+    var pressedSideButtonIcon by remember { mutableStateOf<Pair<Side, Int>?>(null) }
     var pressedPolarButton by remember { mutableStateOf<Triple<PolarZone, PolarSide, Boolean>?>(null) } // (zone, side, isTop)
 
     // State for radio groups: Map<radioGroupId, Pair<Side, buttonIndex>>
@@ -397,7 +398,7 @@ fun EnhancedCircularButtonLayout(
                 iconColor = theme.mainButtons.iconColor,
                 activeIconColor = theme.mainButtons.activeIconColor,
                 textRadialLayout = textRadialLayout,
-                padding = elementsPadding
+                padding = elementsPadding,
             )
 
             // Draw right buttons
