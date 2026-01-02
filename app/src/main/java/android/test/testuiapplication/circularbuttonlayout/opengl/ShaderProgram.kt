@@ -1,4 +1,4 @@
-package android.test.testuiapplication.opengl
+package android.test.testuiapplication.circularbuttonlayout.opengl
 
 import android.opengl.GLES20
 

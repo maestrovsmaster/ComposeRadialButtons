@@ -1,6 +1,7 @@
-package android.test.testuiapplication.opengl
+package android.test.testuiapplication.circularbuttonlayout.opengl
 
 import android.content.Context
+import android.graphics.PixelFormat
 import android.opengl.GLSurfaceView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -55,7 +56,7 @@ private fun createGLSurfaceView(
 
         // Встановити прозорий фон
         setEGLConfigChooser(8, 8, 8, 8, 16, 0)
-        holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+        holder.setFormat(PixelFormat.TRANSLUCENT)
 
         // Media overlay дозволяє GLSurfaceView бути між шарами Canvas
         setZOrderMediaOverlay(true)
@@ -92,7 +93,7 @@ class SphereGLSurfaceView(
 
         // Прозорий фон
         setEGLConfigChooser(8, 8, 8, 8, 16, 0)
-        holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+        holder.setFormat(PixelFormat.TRANSLUCENT)
 
         // Конвертувати колір
         val argb = color.toArgb()

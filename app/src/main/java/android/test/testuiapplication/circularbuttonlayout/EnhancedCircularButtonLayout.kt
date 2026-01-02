@@ -10,11 +10,11 @@ import android.test.testuiapplication.circularbuttonlayout.data.CircularLayoutTh
 import android.test.testuiapplication.circularbuttonlayout.data.UnderPolarZone
 import android.test.testuiapplication.circularbuttonlayout.drawing.drawDualSegmentButtons
 import android.test.testuiapplication.circularbuttonlayout.drawing.drawPolarButtonGroup
-import android.test.testuiapplication.circularbuttonlayout.drawing.drawUnderPolarZone
+import android.test.testuiapplication.circularbuttonlayout.opengl.SphereGLSurfaceView
 import android.test.testuiapplication.circularbuttonlayout.touch.isPointInButton
 import android.test.testuiapplication.circularbuttonlayout.touch.isPointInPolarZone
 import android.test.testuiapplication.circularbuttonlayout.touch.isPointInIconSegment
-import android.test.testuiapplication.opengl.SphereView
+import android.test.testuiapplication.circularbuttonlayout.opengl.SphereView
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import android.util.Log
@@ -29,13 +29,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -93,7 +89,7 @@ fun EnhancedCircularButtonLayout(
     var selectedRadioButtons by remember { mutableStateOf<Map<String, Pair<Side, Int>>>(emptyMap()) }
 
     // Reference to SphereGLSurfaceView for light animation
-    var sphereView by remember { mutableStateOf<android.test.testuiapplication.opengl.SphereGLSurfaceView?>(null) }
+    var sphereView by remember { mutableStateOf<SphereGLSurfaceView?>(null) }
 
     // State for content inside sphere (Composable)
     var sphereContent by remember { mutableStateOf<@Composable () -> Unit>({

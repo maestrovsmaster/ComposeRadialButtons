@@ -1,4 +1,4 @@
-package android.test.testuiapplication.opengl
+package android.test.testuiapplication.circularbuttonlayout.opengl
 
 import kotlin.math.cos
 import kotlin.math.sin

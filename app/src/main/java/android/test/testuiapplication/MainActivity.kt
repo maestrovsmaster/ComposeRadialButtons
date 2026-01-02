@@ -18,55 +18,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TestUIApplicationTheme {
-                HorizontalCircularButtonLayoutScreen()
+                CarInterfaceExample()
             }
         }
     }
 }
 
-@Composable
-fun HorizontalCircularButtonLayoutScreen() {
-    // Кнопки ліворуч від центру
-    val leftButtons = remember {
-        listOf(
-            ButtonData("L1") { Log.d("CircularMenu", "Left Button 1 clicked") },
-            ButtonData("L2") { Log.d("CircularMenu", "Left Button 2 clicked") },
-            ButtonData("L3") { Log.d("CircularMenu", "Left Button 3 clicked") }
-        )
-    }
 
-    // Кнопки праворуч від центру
-    val rightButtons = remember {
-        listOf(
-            ButtonData("R1") { Log.d("CircularMenu", "Right Button 1 clicked") },
-            ButtonData("R2") { Log.d("CircularMenu", "Right Button 2 clicked") },
-            ButtonData("R3") { Log.d("CircularMenu", "Right Button 3 clicked") }
-        )
-    }
-
-    HorizontalCircularButtonLayout(
-        modifier = Modifier.fillMaxSize(),
-        leftButtons = leftButtons,
-        rightButtons = rightButtons,
-        centerLabel = "Menu",
-        onCenterClick = {
-            Log.d("CircularMenu", "Center clicked!")
-        },
-        centerColor = Color(0xFF4CAF50),
-        buttonColor = Color(0xFF607D8B),
-        selectedButtonColor = Color(0xFF2196F3),
-        // Автоматичний розрахунок:
-        // centerRadius = containerHeight * 0.5 (50% висоти = R1)
-        // outerRadius = containerHeight * 1.0 (100% висоти = R2)
-        centerRadiusRatio = 0.5f,
-        outerRadiusRatio = 1.0f
-    )
-}
 
 @Preview(showBackground = true, widthDp = 800, heightDp = 400)
 @Composable
 fun HorizontalCircularButtonLayoutScreenPreview() {
     TestUIApplicationTheme {
-        HorizontalCircularButtonLayoutScreen()
+        CarInterfaceExample()
     }
 }

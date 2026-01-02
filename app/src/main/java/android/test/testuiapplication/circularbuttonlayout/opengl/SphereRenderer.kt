@@ -1,8 +1,9 @@
-package android.test.testuiapplication.opengl
+package android.test.testuiapplication.circularbuttonlayout.opengl
 
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import android.util.Log
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -119,7 +120,7 @@ class SphereRenderer(
         baseColorHandle = GLES20.glGetUniformLocation(shaderProgram, "uBaseColor")
         contentColorHandle = GLES20.glGetUniformLocation(shaderProgram, "uContentColor")
 
-        android.util.Log.d("SphereRenderer", "contentColorHandle = $contentColorHandle (should be >= 0)")
+        Log.d("SphereRenderer", "contentColorHandle = $contentColorHandle (should be >= 0)")
     }
 
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
@@ -288,6 +289,6 @@ class SphereRenderer(
         contentColor[0] = r
         contentColor[1] = g
         contentColor[2] = b
-        android.util.Log.d("SphereRenderer", "Content color set to RGB($r, $g, $b)")
+        Log.d("SphereRenderer", "Content color set to RGB($r, $g, $b)")
     }
 }
