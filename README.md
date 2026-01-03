@@ -44,11 +44,10 @@ Add the dependency to your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.yourusername:ComposeRadialButtons:1.0.0")
+    implementation("com.github.maestrovsmaster::ComposeRadialButtons:1.0.0")
 }
 ```
 
-**Note:** Replace `yourusername` with your actual GitHub username and `1.0.0` with the desired version tag.
 
 ## Quick Start
 
