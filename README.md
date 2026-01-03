@@ -7,7 +7,7 @@
 A powerful and customizable circular/radial button layout library for Jetpack Compose with animations, touch detection, and flexible configuration.
 
 <div align="center">
-  <img src="car_lesser.jpeg" alt="Demo" width="400"/>
+  <img src="screenshot.png" alt="Demo" width="400"/>
 </div>
 
 ## Features
