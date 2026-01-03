@@ -1,0 +1,11 @@
+# JitPack configuration file
+# This ensures JitPack uses the correct JDK and Gradle versions
+
+jdk:
+  - openjdk17
+
+before_install:
+  - ./gradlew clean
+
+install:
+  - ./gradlew :radialbuttons:assembleRelease :radialbuttons:publishToMavenLocal

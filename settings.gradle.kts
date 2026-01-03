@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "TestUIApplication"
 include(":app")
+include(":radialbuttons")
