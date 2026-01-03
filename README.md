@@ -44,7 +44,7 @@ Add the dependency to your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.github.maestrovsmaster::ComposeRadialButtons:1.0.0")
+    implementation("implementation 'com.github.maestrovsmaster:ComposeRadialButtons:1.01'")
 }
 ```
 
