@@ -70,14 +70,15 @@ afterEvaluate {
             create<MavenPublication>("release") {
                 from(components["release"])
 
-                groupId = "com.github.maestrocreations"
+                // Use JitPack properties or fallback to defaults
+                groupId = project.findProperty("group")?.toString() ?: "com.github.maestrovsmaster"
                 artifactId = "compose-radial-buttons"
-                version = "1.0.0"
+                version = project.findProperty("version")?.toString() ?: "1.0.0"
 
                 pom {
                     name.set("Compose Radial Buttons")
                     description.set("A circular/radial button layout library for Jetpack Compose with customizable buttons, animations, and touch detection")
-                    url.set("https://github.com/yourusername/ComposeRadialButtons")
+                    url.set("https://github.com/maestrovsmaster/ComposeRadialButtons")
 
                     licenses {
                         license {
@@ -88,15 +89,15 @@ afterEvaluate {
 
                     developers {
                         developer {
-                            id.set("yourusername")
-                            name.set("Your Name")
+                            id.set("maestrovsmaster")
+                            name.set("MaestroCreations")
                         }
                     }
 
                     scm {
-                        connection.set("scm:git:git://github.com/yourusername/ComposeRadialButtons.git")
-                        developerConnection.set("scm:git:ssh://github.com/yourusername/ComposeRadialButtons.git")
-                        url.set("https://github.com/yourusername/ComposeRadialButtons")
+                        connection.set("scm:git:git://github.com/maestrovsmaster/ComposeRadialButtons.git")
+                        developerConnection.set("scm:git:ssh://github.com/maestrovsmaster/ComposeRadialButtons.git")
+                        url.set("https://github.com/maestrovsmaster/ComposeRadialButtons")
                     }
                 }
             }
